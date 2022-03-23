@@ -1,3 +1,7 @@
+![image](https://user-images.githubusercontent.com/61584142/119609193-272f8500-be32-11eb-8ab1-a421989a8bd7.png)
+
+---
+
 # 웹/앱
 - 모든 웹사이트나 앱은 두가지 파트로 구성되어 있다.
     - 클라이언트, 서버 or 프론트엔드, 백엔드
