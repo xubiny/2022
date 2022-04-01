@@ -1382,3 +1382,609 @@ kube-system   kube-scheduler-m-k8s                       1/1     Running   0    
 
 <br/>
 
+#### 쿠버네티스 구성 요소의 이름 생성 규칙
+- 쿠버네티스의 구성 요소는 동시에 여러 개가 존재하는 경우 중복된 이름을 피하려고 뒤에 해시(hash) 코드가 삽입된다. 이떄 해시 코드는 무작위 문자열로 생성된다.
+
+```
+[root@m-k8s ~]# kubectl get pods --all-namespaces | grep kube-proxy
+kube-system   kube-proxy-5ltsx                    1/1     Running   0          22m
+kube-system   kube-proxy-fzvsx                    1/1     Running   0          36m
+kube-system   kube-proxy-gfsc8                    1/1     Running   0          32m
+kube-system   kube-proxy-v8lxz                    1/1     Running   0          27m 
+```
+
+<br/>
+
+- 구성 요소의 이름을 직접 지정할 수도 있지만, 구성 요소는 언제라도 문제가 발견되면 다시 생성되는 특성을 가지는 파드로 이루어져 있어서 자동으로 이름을 지정하는 것이 관리하기 쉽다.
+
+<br/>
+
+- 그리고 coredns에는 중간에 5644d7b6d9라는 문자열이 하나 더 있는데, 이는 레플리카셋(ReplicaSet)을 무작위 문자열로 변형해 추가한 것이다. calico-kube-controllers도 같은 경우다. 
+
+```
+[root@m-k8s ~]# kubectl get pods --all-namespaces | grep coredns
+kube-system   coredns-5644d7b6d9-b4dz9            1/1     Running   0          37m
+kube-system   coredns-5644d7b6d9-jmsxh            1/1     Running   0          37m 
+```
+
+<br/>
+
+#### 관리자나 개발자가 파드를 배포할 때
+- 쿠버네티스의 구성 요소의 유기적인 연결 관계를 표현하면 다음과 같다. 그림에 나와 있는 숫자는 실제로 관리자나 개발자가 파드 배포 명령을 수행했을 때 실행되는 순서다.
+
+![image](https://user-images.githubusercontent.com/61584142/161193709-5d339321-50e1-4d59-80ac-4fb79cf3a15d.png)
+
+<br/>
+
+**통신 순서가 있어서 흐름을 이해할 수 있지만, 각각의 기능을 파악하기는 어렵다. 파드를 배포하는 순서에 따라 요소들의 역할을 정리해 보자.
+
+<br/>
+
+**마스터노드
+
+#### kubectl
+- 쿠버네티스 클러스터에 명령을 내리는 역할을 한다. 다른 구성 요소들과 다르게 바로 실행되는 명령 형태인 바이너리(binary)로 배포되기 때문에 마스터 노드에 있을 필요는 없다. 하지만 통상적으로 API 서버와 주로 통신하므로 이 책에서는 API 서버가 위치한 마스터 노드에 구성했다.
+
+<br/>
+
+#### API 서버
+- 쿠버네티스 클러스터의 중심 역할을 하는 통로다. 주로 상태 값을 저장하는 etcd와 통신하지만, 그 밖의 요소들 또한 API 서버를 중심에 두고 통신하므로 API 서버의 역할이 매우 중요하다. 회사에 비유하면 모든 직원과 상황을 관리하고 목표를 설정하는 관리자에 해당한다.
+
+<br/>
+
+#### etcd
+- 구성 요소들의 상태 값이 모두 저장되는 곳이다. 회사의 관리자가 모든 보고 내용을 기록하는 노트라고 생각하면 된다. 실제로 etcd 외의 다른 구성 요소는 상태 값을 관리하지 않는다. 그러므로 etcd의 정보만 백업돼 있다면 긴급한 장애 상황에서도 쿠버네티스 클러스터는 복구할 수 있다. 또한 etcd는 분산 저장이 가능한 key-value 저장소이므로, 복제해 여러 곳에 저장해 두면 하나의 etcd에서 장애가 나더라도 시스템의 가용성을 확보할 수 있다.
+- etcd(엣시디)를 약어로 오인하는 경우가 있다. etcd는 리눅스의 구성 정보를 주로 가지고 있는 etc 디렉터리와 distributed(퍼뜨렸다)의 합성어다. 따라서 etcd는 구성 정보를 퍼뜨려 저장하겠다는 의미다.
+
+<br/>
+
+#### 컨트롤러 매니저
+- 컨트롤러 매니저는 쿠버네티스 클러스터의 오브젝트 상태를 관리한다. 예를 들어 워커 노드에서 통신이 되지 않는 경우, 상태 체크와 복구는 컨트롤러 매니저에 속한 노드 컨트롤러에서 이루어진다. 다른 예로 레플리카셋 컨트롤러는 레플리카셋에 요청받은 파드 개수대로 파드를 생성한다. 뒤에 나오는 서비스와 파드를 연결하는 역할을 하는 엔드포인트 컨트롤러 또한 컨트롤러 매니저다. 이와 같이 다양한 상태 값을 관리하는 주체들이 컨트롤러 매니저에 소속돼 각자의 역할을 수행한다.
+
+<br/>
+
+#### 스케줄러
+- 노드의 상태와 자원, 레이블, 요구 조건 등을 고려해 파드를 어떤 워커 노드에 생성할 것인지를 결정하고 할당한다. 스케줄러라는 이름에 걸맞게 파드를 조건에 맞는 워커 노드에 지정하고, 파드가 워커 노드에 할당되는 일정을 관리하는 역할을 담당한다.
+
+<br/>
+
+**워커 노드
+
+#### kubelet
+- 파드의 구성 내용(PodSpec)을 받아서 컨테이너 런타임으로 전달하고, 파드 안의 컨테이너들이 정상적으로 작동하는지 모니터링한다.
+
+<br/>
+
+#### 컨테이너 런타임(CRI, Container Runtime Interface)
+- 파드를 이루는 컨테이너의  실행을 담당한다. 파드 안에서 다양한 종류의 컨테이너가 문제 없이 작동하게 만드는 표준 인터페이스다.
+
+<br/>
+
+#### 파드(Pod)
+- 한 개 이상의 컨테이너로 단일 목적의 일을 하기 위해서 모인 단위이다. 즉, 웹서버 역할을 할 수도 있고 로그나 데이터를 분석할 수도 있다. 여기서 중요한 것은 파드는 언제라도 죽을 수 있는 존재라는 점이다. 이것이 쿠버네티스를 처음 배울 때 가장 이해하기 어려운 부분이다. 가상 머신은 언제라도 죽을 수 있다고 가정하고 디자인하지 않지만, 파드는 언제라도 죽을 수 있다고 가정하고 설계됐기 때문에 쿠버네티스는 여러 대안을 디자인했다.
+
+![image](https://user-images.githubusercontent.com/61584142/161194966-28837b64-626e-48ac-bdc8-2db7bc48fb2c.png)
+
+<br/>
+
+**선택 가능한 구성 요소
+- 위의 요소는 기본 설정으로 배포된 쿠버네티스에서 이루어지는 통신 단계를 구분한 것이다. 이외에 선택적으로 배포하는 것들은 순서와 상관이 없다.
+
+<br/>
+
+#### 네트워크 플러그인
+- 쿠버네티스 클러스터의 통신을 위해서 네트워크 플러그인을 선택하고 구성해야 한다. 네트워크 플러그인은 일반적으로 CNI로 구성하는데, 주로 사용하는 CNI에는 캘리코(Calico), 플래널(Flannel), 실리움(Cilium), 큐브 라우터(Kube-router), 로마나(Romana), 위브넷(WeaveNet), Canal이 있다. 여기서는 캘리코를 선택해 구성했다.
+
+<br/>
+
+#### CoreDNS
+- 클라우드 네이티브 컴퓨팅 재단에서 보증하는 프로젝트로, 빠르고 유연한 DNS 서버다. 쿠버네티스 클러스터에서 도메인 이름을 이용해 통신하는 데 사용한다. 실무에서 쿠버네티스 클러스터를 구성하여 사용할 때는 IP보다 도메인 네임을 편리하게 관리해 주는 CoreDNS를 사용하는 것이 일반적이다. 해당 내용을 자세히 알아보려면 홈페이지(https://coredns.io)를 참조하면 된다.
+
+<br/>
+
+#### CNI
+- CNI(Container Network Interface, 컨테이너 네트워크 인터페이스)는 클라우드 네이티브 컴퓨팅 재단의 프로젝트로, 컨테이너의 네트워크 안정성과 확장성을 보장하기 위해 개발됐다. CNI에 사용할 수 있는 네트워크 플러그인은 다양한데, 구성 방식과 지원하는 기능, 성능이 각기 다르므로 사용 목적에 맞게 선택하면 된다. 예를 들어 Calico는 L3로 컨테이너 네트워크를 구성하고, Flannel은 L2로 컨테이너 네트워크를 구성한다. 또한 네트워크 프로토콜인 BGP와 VXLAN의 지원, ACL(Access Control List) 지원, 보안 기능 제공 등을 살펴보고 필요한 조건을 가지고 있는 네트워크 플러그인을 선택할 수 있어서 설계 유연성이 매우 높다.
+
+![image](https://user-images.githubusercontent.com/61584142/161195165-fd32be6b-f26b-441c-8c9d-fb23c433a87c.png)
+
+<br/><br/>
+
+#### 사용자가 배포된 파드에 접속할 때
+- 이번에는 파드가 배포된 이후 사용자 입장에서 배포된 파드에 접속하는 과정을 살펴보자.
+
+<br/>
+
+#### 1. kube-proxy
+- 쿠버네티스 클러스터는 파드가 위치한 노드에 kube-proxy를 통해 파드가 통신할 수 있는 네트워크를 설정한다. 이때 실제 통신은 br_netfilter와 iptables로 관리한다. 두 기능은 Vagrantfile에서 호출하는 config.sh 코드를 설명할 때 다뤘다.
+
+<br/>
+
+#### 2. 파드
+- 이미 배포된 파드에 접속하고 필요한 내용을 전달받는다. 이때 대부분 사용자는 파드가 어느 워커 노드에 위치하는지 신경 쓰지 않아도 된다.
+
+<br/>
+
+**쿠버네티스의 각 구성 요소를 파드의 배포와 접속 관점에서 설명했지만, 이해하기는 쉽지 않다. 파드가 배포되는 과정을 살펴보며 쿠버네티스의 구성 요소를 좀 더 깊이 알아보자.
+
+<br/><br/>
+
+### 3.1.5 파드의 생명주기로 쿠버네티스 구성 요소 살펴보기
+- 쿠버네티스의 구성 요소를 개별적으로 살펴봤으나 기능만 나열해서는 이해하기가 어렵다. 따라서 파드가 배포되는 과정을 하나하나 자세히 살펴보면서 쿠버네티스의 구성 요소들이 어떤 역할을 담당하는지 정리해 보자.
+
+<br/>
+
+- 쿠버네티스의 가장 큰 장점은 쿠버네티스의 구성 요소마다 하는 일이 명확하게 구분돼 각자의 역할만 충실하게 수행하면 클러스터 시스템이 안정적으로 운영된다는 점이다. 이렇게 각자의 역할이 명확하게 나뉘어진 것은 마이크로서비스 아키텍처(MSA) 구조와도 밀접하게 연관된다. 또한 역할이 나뉘어 있어서 문제가 발생했을 때 어느 부분에서 문제가 발생했는지 디버깅하기 쉽다.
+
+<br/>
+
+- 먼저 그림을 통해 파드의 생명주기를 살펴보자. 생명주기(life cycle)는 파드가 생성, 수정, 삭제되는 과정을 나타낸다.
+
+![image](https://user-images.githubusercontent.com/61584142/161198047-9a365fef-b2cf-4031-bcd6-b3799943daa0.png)
+
+1. kubectl을 통해 API 서버에 파드 생성을 요청한다.
+
+2. (업데이트가 있을 때마다 매번) API 서버에 전달된 내용이 있으면 API 서버는 etcd에 전달된 내용을 모두 기록해 클러스터의 상태 값을 최신으로 유지한다. 따라서 각 요소가 상태를 업데이트할 때마다 모두 API 서버를 통해 etcd에 기록된다.
+
+3. API 서버에 파드 생성이 요청된 것을 컨트롤러 매니저가 인지하면 컨트롤러 매니저는 파드를 생성하고, 이 상태를 API 서버에 전달한다. 참고로 아직 어떤 워커 노드에 파드를 적용할지는 결정되지 않은 상태로 파드만 생성됩니다. 
+
+4. API 서버에 파드가 생성됐다는 정보를 스케줄러가 인지한다. 스케줄러는 생성된 파드를 어떤 워커 노드에 적용할지 조건을 고려해 결정하고 해당 워커 노드에 파드를 띄우도록 요청한다.
+
+5. API 서버에 전달된 정보대로 지정한 워커 노드에 파드가 속해 있는지 스케줄러가 kubelet으로 확인한다.
+
+6. kubelet에서 컨테이너 런타임으로 파드 생성을 요청한다.
+
+7. 파드가 생성된다.
+
+8. 파드가 사용 가능한 상태가 된다.
+
+<br/>
+
+**앞의 내용을 살펴보다가 ‘API 서버는 감시만 하는 걸까? 화살표가 반대로 그려져야 맞지 않을까?’라는 의문이 들었다면 내용을 제대로 봤다.
+- 이 부분은 쿠버네티스를 이해하는 데 매우 중요한 부분이다. 쿠버네티스는 작업을 순서대로 진행하는 워크플로(workflow, 작업절차) 구조가 아니라 선언적인(declarative) 시스템 구조를 가지고 있다. 즉, 각 요소가 추구하는 상태(desired status)를 선언하면 현재 상태(current status)와 맞는지 점검하고 그것에 맞추려고 노력하는 구조로 돼 있다는 뜻이다.
+
+<br/>
+
+- 따라서 추구하는 상태를 API 서버에 선언하면 다른 요소들이 API 서버에 와서 현재 상태와 비교하고 그에 맞게 상태를 변경하려고 한다. 여기서 API는 현재 상태 값을 가지고 있는데, 이것을 보존해야 해서 etcd가 필요하다. API 서버와 etcd는 거의 한몸처럼 움직이도록 설계됐다. 다만, 여기서 워커노드는 워크플로 구조에 따라 설계됐다. 쿠버네티스가 kubelet과 컨테이너 런타임을 통해 파드를 새로 생성하고 제거해야 하는 구조여서 선언적인 방식으로 구조화하기에는 어려움이 있기 때문이다. 또한 명령이 절차적으로 전달되는 방식은 시스템의 성능을 높이는 데 효율적이다. 하지만 마스터 노드는 이미 생성된 파드들을 유기적으로 연결하므로 쿠버네티스 클러스터를 안정적으로 유지하려면 선언적인 시스템이 더 낫다.
+
+![image](https://user-images.githubusercontent.com/61584142/161198354-8203e114-4dde-4b37-bd74-0819ad9ccab2.png)
+
+<br/>
+
+- 이렇듯 쿠버네티스는 굉장히 잘 설계된 시스템 구조를 가지고 있어서 구조적으로 이해하기 쉽고 문제가 생기면 이를 쉽게 파악하고 조치할 수 있다. 그러면 앞의 구성 요소 중에서 몇 가지를 검증해 실제로 어떻게 작동하는지 살펴보자.
+
+<br/><br/>
+
+### 3.1.6 쿠버네티스 구성 요소의 기능 검증하기
+- 쿠버네티스의 구성 요소를 좀 더 이해하기 쉽게 시나이로를 작성해 구성 요소들의 역할과 의미를 확인해 보자.
+
+<br/>
+
+#### kubectl
+- 앞에서 kubectl은 꼭 마스터 노드에 위치할 필요 없다고 했다. 실제로 쿠버네티스 클러스터의 외부에서 쿠버네티스 클러스터에 명령을 내릴 수도 있다. 어느 곳에서든지 kubectl을 실행하려면 어떤 부분이 필요한지 확인해 보자.
+
+<br/>
+
+1. 슈퍼푸티 세션 창에서 w3-k8s를 더블클릭해 터미널에 접속한다. 
+
+![image](https://user-images.githubusercontent.com/61584142/161198772-01a7e3ae-33d6-49f1-af26-b326cc20a06f.png)
+
+<br/>
+
+2. kubectl get nodes를 실행한다.
+```
+[root@w3-k8s ~]# kubectl get nodes
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+```
+- 명령을 실행해도 쿠버네티스의 노드들에 대한 정보가 표시되지 않는다. 이는 쿠버네티스 클러스터의 정보를 kubectl이 알지 못하기 때문이다. ‘3.1.5 파드 생명주기로 쿠버네티스 구성 요소 살펴보기’를 보면 kubectl은 API 서버를 통해 쿠버네티스에 명령을 내린다. 따라서 kubectl이 어디에 있더라도 API 서버의 접속 정보만 있다면 어느 곳에서든 쿠버네티스 클러스터에 명령을 내릴 수 있다.
+
+<br/>
+
+3. 쿠버네티스 클러스터의 정보(/etc/kubernetes/admin.conf)를 마스터 노드에서 scp(secure copy) 명령으로 w3-k8s의 현재 디렉터리(.)에 받아온다. 이때 접속 기록이 없기 때문에 known_hosts로 저장하도록 yes를 입력합니다. 마스터 노드의 접속 암호인 vagrant도 입력한다.
+```
+[root@w3-k8s ~]# scp root@192.168.1.10:/etc/kubernetes/admin.conf .
+[root@w3-k8s ~]# scp root@192.168.1.10:/etc/kubernetes/admin.conf .
+The authenticity of host '192.168.1.10 (192.168.1.10)' can't be established.
+ECDSA key fingerprint is SHA256:l6XikZFgOibzSygqZ6+UYHUnEmjFEFhx7PpZw0I3WaM.
+ECDSA key fingerprint is MD5:09:74:43:ef:38:3e:36:a1:7e:51:76:1a:ac:2d:7e:0c.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.1.10' (ECDSA) to the list of known hosts.
+root@192.168.1.10's password: vagrant
+admin.conf                                     100% 5452     1.8MB/s   00:00
+```
+
+<br/>
+
+4. kubectl get nodes 명령에 추가로 쿠버네티스 클러스터 정보를 입력받는 옵션(--kubeconfig)과 마스터 노드에서 받아온 admin.conf를 입력하고 실행한다.
+```
+[root@w3-k8s ~]# kubectl get nodes --kubeconfig admin.conf
+NAME     STATUS   ROLES    AGE   VERSION
+m-k8s    Ready    master   60m   v1.18.4
+w1-k8s   Ready    <none>   55m   v1.18.4
+w2-k8s   Ready    <none>   50m   v1.18.4
+w3-k8s   Ready    <none>   46m   v1.18.4 
+```
+- 노드 정보가 정상적으로 표시된다. kubectl을 실행하려면 무엇이 필요한지 확인했다.
+
+<br/><br/>
+
+#### kubelet
+- kubelet은 쿠버네티스에서 파드의 생성과 상태 관리 및 복구 등을 담당하는 매우 중요한 구성 요소다. 따라서 kubelet에 문제가 생기면 파드가 정상적으로 관리되지 않는다.
+
+<br/>
+
+1. 기능을 검증하려면 실제로 파드를 배포해야 한다. m-k8s(마스터 노드)에서 `kubectl create -f ~/_Book_k8sInfra/ch3/3.1.6/nginx-pod.yaml` 명령으로 nginx 웹 서버 파드를 배포한다. 여기서 -f 옵션은 일반적으로 쓰는 force가 아니라 filename을 의미한다. 즉, 파드의 구성 내용을 파일로 읽어 들여 1개의 파드를 임의의 워커 노드에 배포하는 것이다. 
+```
+[root@m-k8s ~]# kubectl create -f ~/_Book_k8sInfra/ch3/3.1.6/nginx-pod.yaml
+pod/nginx-pod created
+```
+
+<br/>
+
+2. kubectl get pod 명령으로 배포된 파드가 정상적으로 배포된 상태(Running)인지 확인한다.
+```
+[root@m-k8s ~]# kubectl get pod
+NAME        READY   STATUS    RESTARTS   AGE
+nginx-pod   1/1     Running   0         67s 
+```
+
+<br/>
+
+3. kubectl get pods -o wide 명령을 실행해 파드가 배포된 워커 노드를 확인한다. -o는 output의 약어로 출력을 특정 형식으로 해 주는 옵션이며, wide는 제공되는 출력 형식 중에서 출력 정보를 더 많이 표시해 주는 옵션이다.
+```
+[root@m-k8s ~]# kubectl get pods -o wide
+NAME        READY   STATUS    RESTARTS   AGE      IP               NODE      …
+nginx-pod   1/1     Running   0          94s      172.16.103.129   w2-k8s   …
+```
+
+<br/>
+
+4. 배포된 노드인 w2-k8s에 접속해 systemctl stop kubelet으로 kubelet 서비스를 멈춘다. 스케줄러가 임의로 노드를 지정해 배포하므로 책과 다를 수 있다. 실습할 때는 앞의 결과에서 실제로 나온 노드에서 실행한다.
+```
+[root@w2-k8s ~]# systemctl stop kubelet
+```
+
+<br/>
+
+5. m-k8s에서 kubectl get pod로 상태를 확인하고, kubectl delete pod nginx-pod 명령을 입력해 파드를 삭제한다.
+```
+[root@m-k8s ~]# kubectl get pod
+NAME        READY   STATUS    RESTARTS   AGE
+nginx-pod   1/1     Running   0          3m2s
+[root@m-k8s ~]# kubectl delete pod nginx-pod
+pod "nginx-pod" deleted
+```
+
+<br/>
+
+6. 슈퍼푸티 명령 창에 아무런 변화가 없다면 Ctrl+C를 눌러 kubectl delete pod nginx-pod 명령을 중지한다.
+```
+[root@m-k8s ~]# kubectl delete pod nginx-pod
+pod "nginx-pod" deleted
+^C
+```
+
+<br/>
+
+7. 다시 kubectl get pod 명령을 실행해 파드의 상태를 확인한다. 실행 결과를 보면 nginx-pod를 삭제(Terminating)하고 있다. 하지만 kubelet이 작동하지 않는 상태라 파드는 삭제되지 않는다.
+```
+[root@m-k8s ~]# kubectl get pod
+NAME        READY   STATUS        RESTARTS   AGE
+nginx-pod   1/1     Terminating  0          16m 
+<none> 
+```
+
+<br/>
+
+8. 내용을 확인했으니 w2-k8s에서 systemctl start kubelet을 실행해 kubelet을 복구한다.
+```
+[root@w2-k8s ~]# systemctl start kubelet
+```
+
+<br/>
+
+9. 잠시 후에 m-k8s에서 kubelet get pod 명령을 실행해 nginx-pod가 삭제됐는지 확인한다.
+```
+[root@m-k8s ~]# kubectl get pod
+No resources found in default namespace.
+```
+- kubelet에 문제가 생기면 파드가 제대로 관리되지 않음을 확인했다.
+
+<br/><br/>
+
+#### kube-proxy
+- kubelet이 파드의 상태를 관리한다면 kube-proxy는 파드의 통신을 담당한다. 앞서 config.sh 파일에서 br_netfilter 커널 모듈을 적재하고 iptables를 거쳐 통신하도록 설정했다.
+- config.sh의 kube-proxy 관련 부분
+```
+cat <<EOF > /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+modprobe br_netfilter
+```
+
+<br/>
+
+- 그런데 이 설정이 정상적으로 작동하지 않는다면, 즉 kube-proxy에 문제가 생기면 어떻게 될까? 지금부터 확인해 보자.
+
+<br/>
+
+1. 테스트하기 위해 마스터 노드인 m-k8s에서 다시 파드를 배포한다.
+```
+[root@m-k8s ~]# kubectl create -f ~/_Book_k8sInfra/ch3/3.1.6/nginx-pod.yaml
+pod/nginx-pod created
+```
+
+<br/>
+
+
+2. kubectl get pod -o wide 명령으로 파드의 IP와 워커 노드를 확인한다.
+```
+[root@m-k8s ~]# kubectl get pod -o wide
+NAME        READY   STATUS    RESTARTS   AGE   IP               NODE     …
+nginx-pod   1/1     Running   0          21s   172.16.103.130  w2-k8s   …
+```
+
+<br/>
+
+3. curl(client URL)로 파드의 전 단계에서 확인한 파드의 IP로 nginx 웹 서버 메인 페이지 내용을 확인한다.
+```
+[root@m-k8s ~]# curl 172.16.103.130
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+```
+
+<br/>
+
+4. 이제 w2-k8s(실제로 앞의 배포 명령에 나온 노드로 접속)에 접속해 modprobe -r br_netfilter 명령으로 파드가 위치한 워커 노드에서 br_netfilter 모듈을 제거한다. 여기서 -r은 remove를 의미한다. 그리고 네트워크를 다시 시작해 변경된 내용을 적용한다. 이렇게 kube-proxy에 문제가 생기는 상황을 만든다.
+```
+[root@w2-k8s ~]# modprobe -r br_netfilter
+[root@w2-k8s ~]# systemctl restart network
+```
+
+<br/>
+
+5. m-k8s에서 다시 한 번 curl로 파드의 nginx 웹 서버 페이지 정보를 받아온다. 한참이 지나도 파드에서 정보를 받아오지 못했다면 Ctrl+C로 요청을 종료한다.
+```
+[root@m-k8s ~]# curl 172.16.103.130
+curl: (7) Failed connect to 172.16.103.130:80; Connection timed out
+^C 
+```
+
+<br/>
+
+6. kubectl get pod -o wide를 실행해 파드 상태를 확인힌다.
+```
+[root@m-k8s ~]# kubectl get pod -o wide
+NAME        READY   STATUS    RESTARTS   AGE     IP               NODE      …
+nginx-pod   1/1     Running  0          9m59s   172.16.103.130   w2-k8s   …
+```
+- 파드의 노드 위치와 IP가 변경되지 않았는지, 작동 상태에 문제가 없는지 확인한다. kubelet을 통해 확인된 파드의 노드 위치와 IP는 그대로고, 상태도 작동 중(Running)으로 문제가 없는 것처럼 보인다. 하지만 kube-proxy가 이용하는 br_netfilter에 문제가 있어서 파드의 nginx 웹 서버와의 통신만이 정상적으로 이루어지지 않는(curl로 nginx 서버에 접속했으나 연결이 되지 않음, Connection timed out) 상태다.
+
+<br/>
+
+7. 정상적으로 파드의 nginx 웹 서버 페이지 정보를 받아올 수 있는 상태로 만들어 보자. 워커 노드에서 modprobe br_netfilter 명령을 실행해 br_netfilter를 커널에 적재하고 시스템을 다시 시작해 적용한다.
+```
+[root@w2-k8s ~]# modprobe br_netfilter
+[root@w2-k8s ~]# reboot
+```
+
+<br/>
+
+8. 일정 시간이 지난 후에 m-k8s에서 파드의 상태를 확인하면 파드가 1회 다시 시작했다는 의미로 RESTARTS가 1로 증가하고 IP가 변경된 것을 확인할 수 있다.
+```
+[root@m-k8s ~]# kubectl get pod -o wide
+NAME        READY   STATUS    RESTARTS   AGE   IP                NODE     …
+nginx-pod   1/1     Running   1         14m   172.16.103.131   w2-k8s   …
+```
+
+<br/>
+
+9. 바뀐 IP로 curl 명령을 실행해 파드로부터 정보를 정상적으로 받아오는지 확인한다.
+```
+[root@m-k8s ~]# curl 172.16.103.131
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+[생략]
+```
+
+<br/>
+
+10. 다음 내용을 진행하기 위해 배포한 파드를 삭제(delete)한다.
+```
+[root@m-k8s ~]# kubectl delete -f ~/_Book_k8sInfra/ch3/3.1.6/nginx-pod.yaml
+pod "nginx-pod" deleted
+```
+
+<br/>
+
+**쿠버네티스를 구성했으니 실제로 쿠버네티스를 이용해 어떤 일을 할 수 있는지 여러 가지 기능을 직접 실습하며 배워보자.
+
+<br/><br/><br/><br/>
+
+## 3.2 쿠버네티스 기본 사용법 배우기
+- 이제부터 나오는 모든 실습 파일은 홈 디렉터리(~)에 `_Book_k8sInfra` 디렉터리 아래 각 장(ch)별로 위치하므로 해당 디렉터리에서 필요한 실습 파일을 찾아 진행한다.
+```
+[root@m-k8s ~]# ls ~/_Book_k8sInfra
+app ch2 ch3 ch4 ch5 ch6
+```
+
+<br/>
+
+### 3.2.1 파드를 생성하는 방법
+- 쿠버네티스를 사용한다는 것은 결국 사용자에게 효과적으로 파드를 제공한다는 뜻이다. 따라서 가장 먼저 파드를 생성해 보자.
+
+<br/>
+
+- 사실 이미 구성 요소의 기능을 검증할 때 깃허브에서 내려받은 실습 파일을 통해 nginx 웹 서버 파드를 생성하고 삭제해 봤다. 그런데 방법이 조금 복잡했다. 파드를 더 간단하게 생성하는 방법은 없을까?
+
+<br/>
+
+- 당연히 있다. kubectl run 명령을 실행하면 쉽게 파드를 생성할 수 있다. 다음 명령에서 run 다음에 나오는 nginx는 파드의 이름이고, --image=nginx는 생성할 이미지의 이름이다.
+
+```
+[root@m-k8s ~]# kubectl run nginx-pod --image=nginx
+pod/nginx-pod created
+```
+
+<br/>
+
+- 파드가 잘 생성됐는지 kubectl get pod 명령으로 확인한다.
+```
+[root@m-k8s ~]# kubectl get pod
+NAME READY STATUS RESTARTS AGE
+nginx-pod 1/1 Running 0 35s
+```
+
+<br/>
+
+- 이렇게 쉽게 파드를 생성할 수 있는데, 왜 그동안 어렵게 kubectl create라는 명령을 사용했을까?
+- create로 파드를 생성해서 run 방식과 비교해 보자.
+
+<br/>
+
+- kubectl run과 동일하게 kubectl create로 파드를 생성한다.
+```
+[root@m-k8s ~]# kubectl create nginx --image=nginx
+Error: unknown flag: --image
+[생략]
+```
+
+<br/>
+
+- --image라는 옵션이 없다는 에러 메시지만 나오고 파드는 생성되지 않았다. create로 파드를 생성하려면 kubectl create에 deployment를 추가해서 실행해야 한다. 이때 기존 파드 이름인 nginx와 중복을 피하고자 파드의 이름을 dpy-nginx로 지정해 생성한다.
+
+```
+[root@m-k8s ~]# kubectl create deployment dpy-nginx --image=nginx
+deployment.apps/dpy-nginx created
+```
+
+<br/>
+
+- 생성된 파드(dpy-nginx-7cd4d79cc9-xmv28)를 확인한다.
+
+```
+[root@m-k8s ~]# kubectl get pods
+NAME                         READY   STATUS    RESTARTS   AGE
+dpy-nginx-7cd4d79cc9-xmv28  1/1     Running   0          50s
+nginx-pod                    1/1     Running   0          87s 
+```
+
+<br/>
+
+- 이름에서 dpy-nginx를 제외한 나머지 부분은 무작위로 생성되므로 직접 실행했을 때는 이름이 다를 수 있다.
+
+<br/>
+
+- 두 가지 방식으로 생성한 파드가 모두 제대로 돌아가는지 확인해 보자. 먼저 kubectl get pods -o wide 명령으로 생성된 파드의 IP를 확인한다.
+
+```
+[root@m-k8s ~]# kubectl get pods -o wide
+NAME                        READY   STATUS    RESTARTS   AGE     IP               NODE     NOMINATED NODE   READINESS GATES
+dpy-nginx-7cd4d79cc9-xmv28  1/1     Running   0          72s     172.16.221.129  w1-k8s   <none>           <none>
+nginx-pod                   1/1     Running   0          109s    172.16.103.132  w2-k8s   <none>           <none> 
+```
+
+<br/>
+
+- 각 파드에서 curl 명령을 실행해 웹 페이지 정보를 받아오는지 확인합니다.
+```
+[root@m-k8s ~]# curl 172.16.221.129
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+[생략]
+
+[root@m-k8s ~]# curl 172.16.103.132
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+[생략]
+```
+
+<br/>
+
+- 두 파드의 nginx 웹 페이지가 정상적으로 작동하는 것을 확인했다. 그렇다면 run과 create deployment로 파드를 생성한 것은 무슨 차이가 있을까?
+
+<br/>
+
+- run으로 파드를 생성하면 단일 파드 1개만 생성되고 관리된다. 그리고 create deployment로 파드를 생성하면 디플로이먼트(Deployment)라는 관리 그룹 내에서 파드가 생성된다. 비유를 들자면, run으로 생성한 파드는 초코파이 1개이고, create deployment로 생성한 파드는 초코파이 상자에 들어 있는 초코파이 1개다.
+
+![image](https://user-images.githubusercontent.com/61584142/161214323-2a04b3fa-6378-4682-bc98-653da345be68.png)
+
+<br/>
+
+**그럼 파드와 디플로이먼트가 실제로 어떻게 구성돼 있는지, 디플로이먼트는 어떻게 파드를 관리하는지 알아보자.
+
+<br/>
+
+#### 쿠버네티스 1.18 버전 이전에는 run이 어떻게 작동했을까?
+- 쿠버네티스 1.18 이전 버전에서 run으로 생성되는 기본 파드는 디플로이먼트로 생성됐다. 하지만 run과 create로 생성한 결과에 차이가 없어서 최근에는 대부분 create로 파드를 생성하지만 간단한 테스트가 목적이라면 run으로 단순 파드를 생성할 수도 있다. 1.18 이전 버전에서도 run으로 파드를 생성하면 다음과 같이 DEPRECATED(더 이상 사용을 권고하지 않음)를 표시하며 run --generator=run-pod/v1이나 create를 사용하도록 권고하고 있다.
+```
+[root@m-k8s ~]# kubectl run nginx --image=nginx
+kubectl run --generator=deployment/apps.v1 is DEPRECATED and will be removed in a future version. Use kubectl run --generator=run-pod/v1 or kubectl create instead.
+deployment.apps/nginx created
+```
+
+<br/>
+
+- 1.18 이전 버전에서 run 명령으로 파드를 생성하려면 --generator=run-pod/v1 옵션이 필요하다.
+```
+[root@m-k8s ~]# kubectl run nginx-run --image=nginx --generator=run-pod/v1
+pod/nginx-run created
+```
+
+<br/><br/>
+
+### 3.2.2 오브젝트란
+- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
