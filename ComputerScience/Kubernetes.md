@@ -244,7 +244,1141 @@ Vagrant.configure("2") do |config|
   end
 end</code></pre>
 
+```
+• 1~2번째 줄: 에디터에 현재 파일이 루비(ruby)임을 인식하게 하는 호환 코드입니다. 
+여기서 ft는 파일 종류(file type)의 약자이며, 해당 내용은 실행에 아무런 영향을 미치지 않습니다.
 
+• 3번째 줄: "2"는 베이그런트에서 루비로 코드를 읽어 들여 실행할 때 작동하는 API 버전이고, 
+뒤의 do |config|는 베이그런트 설정의 시작을 알립니다.
 
+• 4번째 줄: 버추얼박스에서 보이는 가상 머신을 "m-k8s"로 정의하고, do|cfg|를 추가해 원하는 설정으로 변경합니다. 
+이렇게 do |이름|으로 시작한 작업은 end로 종료합니다.
 
+• 5번째 줄: 기본값 config.vm.box를 do |cfg|에 적용한 내용을 받아 cfg.vm.box로 변경합니다.
+
+• 6번째 줄: 베이그런트의 프로바이더(provider)가 버추얼박스라는 것을 정의합니다. 
+프로바이더는 베이그런트를 통해 제공되는 코드가 실제로 가상 머신으로 배포되게 하는 소트프웨어입니다. 
+버추얼박스가 여기에 해당합니다. 다음으로 버추얼박스에서 필요한 설정을 정의하는데, 그 시작을 do |vb|로 선언합니다.
+
+• 7~11번째 줄: 버추얼박스에 생성한 가상 머신의 이름, CPU 수, 메모리 크기, 소속된 그룹을 명시합니다. 
+그리고 마지막으로 end를 적어 버추얼박스 설정이 끝났음을 알립니다.
+
+• 12번째 줄: 여기부터는 가상 머신 자체에 대한 설정으로, do |cfg|에 속한 작업입니다. 
+12번째 줄은 호스트의 이름(m-k8s)을 설정합니다.
+
+• 13번째 줄: 호스트 전용 네트워크를 private_network로 설정해 
+eth1 인터페이스를 호스트 전용(Host-Only)으로 구성하고 IP는 192.168.1.10으로 지정합니다.2
+
+• 14번째 줄: ssh 통신은 호스트 60010번을 게스트 22번으로 전달되도록 구성합니다. 
+이때 혹시 모를 포트 중복을 대비해 auto_correct: true로 설정해서 포트가 중복되면 포트가 자동으로 변경되도록 합니다.
+
+• 15번째 줄: 호스트(PC 또는 노트북)와 게스트(가상 머신) 사이에 디렉터리 동기화가 이뤄지지 않게 설정(disabled: true)합니다.
+
+• 16~17번째 줄: 설정 작업(do |config|, do |cfg|)이 종료됐음을 end 구문으로 명시합니다. 
+이때 do와 end의 들여쓰기(indentation) 위치가 정확하게 일치해야 합니다.
+
++
+호스트 전용 네트워크는 호스트 내부에 192.168.1.0대의 사설망을 구성합니다. 
+가상 머신은 NAT(Network Address Translation, 네트워크 주소 변환) 인터페이스인 eth0를 통해서 인터넷에 접속합니다.
+```
+
+<br/>
+
++
+
+```
+베이그런트에서는 ssh 서비스의 기본 포트 번호인 22번을 id: "ssh"로 설정하지 않으면 다음과 같이 중복된 두 개의 포트로 설정합니다. 
+자기 자신(127.0.0.1/localhost)의 2222번 포트로 오는 내용과 모든 IP(0.0.0.0)의 60010 포트에서 오는 내용을 게스트의 22번으로 포워딩합니다. 
+기능적으로는 큰 문제를 일으키지 않으나 명시적으로는 좋지 않습니다.
+
+c:\HashiCorp>vagrant port
+    22 (guest) => 2222 (host)
+    22 (guest) => 60010 (host)
+
+c:\HashiCorp>netstat -an | findstr 2222
+  TCP     127.0.0.1:2222     0.0.0.0:0     LISTENING
+
+c:\HashiCorp>netstat -an | findstr 60010
+  TCP     0.0.0.0:60010      0.0.0.0:0     LISTENING
+```
+
+```
+따라서 이와 같은 설정의 낭비를 줄이고자 id: "ssh"로 설정해 다음과 같이 하나의 포트만 사용합니다. 참고로 vagrant port는 베이그런트에서 사용하는 포트를 확인하는 명령입니다.
+
+c:\HashiCorp>vagrant port
+    22 (guest) => 60010 (host)
+
+c:\HashiCorp>netstat -an | findstr 60010
+  TCP     0.0.0.0:60010     0.0.0.0:0     LISTENING
+```
+
+<br/><br/>
+
+#### 코드 실행
+- 앞에서 작성한 Vagrantfile로 가상 머신을 생성해 보자.
+
+<br/>
+
+1. 명령 프롬프트에서 vagrant up 명령을 다시 실행한다.
+```
+c:\HashiCorp>vagrant up
+Bringing machine 'm-k8s' up with 'virtualbox' provider...
+==> m-k8s: Importing base box 'sysnet4admin/CentOS-k8s'...
+==> m-k8s: Matching MAC address for NAT networking...
+==> m-k8s: Checking if box 'sysnet4admin/CentOS-k8s' version '0.7.0' is up to date...
+==> m-k8s: Setting the name of the VM: m-k8s(github_SysNet4Admin)
+==> m-k8s: Clearing any previously set network interfaces...
+==> m-k8s: Preparing network interfaces based on configuration...
+    m-k8s: Adapter 1: nat
+    m-k8s: Adapter 2: hostonly
+==> m-k8s: Forwarding ports...
+    m-k8s: 22 (guest) => 60010 (host) (adapter 1)
+[생략]
+```
+
+<br/>
+
+2. vagrant up 실행이 끝나면 vagrant ssh 명령을 실행해 생성된 가상 머신(CentOS)에 접속한다.
+```
+c:\HashiCorp>vagrant ssh
+[vagrant@m-k8s ~]$
+```
+
+<br/>
+
+3. CentOS에서 ip addr show eth1 명령을 입력해 IP(192.168.1.10)가 제대로 설정됐는지 확인한다.
+```
+[vagrant@m-k8s ~]$ ip addr show eth1
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 08:00:27:08:4b:e9 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.10/24 brd 192.168.1.255 scope global noprefixroute eth1
+        valid_lft forever preferred_lft forever
+```
+
+<br/>
+
+4. exit 명령을 실행해 CentOS 접속을 종료한다.
+```
+[vagrant@m-k8s ~]$ exit
+logout
+Connection to 127.0.0.1 closed.
+```
+
+<br/>
+
+#### 호스트 전용 네트워크가 정상적으로 작동하지 않는 경우
+- 처음 사용했을 때는 문제가 발생하지 않지만, 최대 절전 모드나 여러 차례 가상 머신을 다시 시작할 때 호스트 전용 네트워크가 정상적으로 작동하지 않는다면 호스트 전용 네트워크에 설정된 어댑터 IP를 192.168.1.1로 지정해 해결할 수 있다.
+
+<br/>
+
+1. 버추얼박스에서 파일 > 호스트 네트워크 관리자를 선택한다(단축키 Ctrl+H)
+
+![image](https://user-images.githubusercontent.com/61584142/161176675-09862658-ec7b-4cf9-bf23-5ffc3a98c3f4.png)
+
+<br/>
+
+2. 창이 나타나면 속성을 클릭하고 DHCP 서버를 사용하지 않도록 체크를 해제하고, IPv4 주소에 192.168.1.1을 입력한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161176704-f24d7c57-8010-47d0-9d81-4285a2cc2f5f.png)
+
+<br/><br/>
+
+### 2.2.2 가상 머신에 추가 패키지 설치하기
+- 2.2.1에서 필요한 내용이 설정된 Vagrantfile을 통해 CentOS에 호스트네임, IP 등을 자동으로 설정해봤다.
+- 이번에는 CentOS에 필요한 패키지를 설치하는 방법을 알아보자.
+
+<br/>
+
+#### 코드입력
+- Vagrantfile에 셸 프로비전을 추가한다.
+```
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+Vagrant.configure("2") do |config|
+  config.vm.define "m-k8s" do |cfg|
+    cfg.vm.box = "sysnet4admin/CentOS-k8s"
+    cfg.vm.provider "virtualbox" do |vb|
+      vb.name = "m-k8s(github_SysNet4Admin)"
+      vb.cpus = 2
+      vb.memory = 2048
+      vb.customize ["modifyvm", :id, "--groups", "/k8s-SM(github_SysNet4Admin)"]
+    end
+    cfg.vm.host_name = "m-k8s"
+    cfg.vm.network "private_network", ip: "192.168.1.10"
+    cfg.vm.network "forwarded_port", guest: 22, host: 60010, auto_correct: true, id: "ssh"
+    cfg.vm.synced_folder "../data", "/vagrant", disabled: true
+    cfg.vm.provision "shell", path: "install_pkg.sh" #add provisioning script
+  end
+end
+```
+
+```
+• 16번째 줄: vm.provision "shell" 구문으로 경로(path)에 있는 install_pkg.sh를 게스트(CentOS) 내부에서 호출해 실행되도록 한다.
+```
+
+<br/>
+
+- Vagrantfile이 위치한 디렉터리에서 추가 패키지를 설치하기 위한 스크립트를 다음과 같이 작성하고 install_pkg.sh라는 이름으로 저장한다.
+<pre><code>#!/usr/bin/env bash
+# install packages
+yum install epel-release -y
+yum install vim-enhanced -y</code></pre>
+
+- Vagrantfile에서 호출한 install_pkg.sh로 입력해 둔 배시 셸 파일을 실행해 EPEL(Extra Package for Enterprise Linux) 저장소와 코드 하이라이트를 위한 Vim의 추가 기능을 설치한다.
+
+<br/>
+
+#### 코드 실행
+- 앞에서 수정한 Vagrantfile로 추가 패키지를 설치해 보자.
+
+<br/>
+
+1. 명령 프롬프트에서 vagrant provision 명령으로 추가한 프로비전 구문을 실행한다.
+```
+c:\HashiCorp>vagrant provision
+==> m-k8s: Running provisioner: shell...
+    m-k8s: Running: C:/Users/HOONJO~1/AppData/Local/Temp/vagrant-shell20191003-23188-14wl2fv.sh
+    m-k8s: Loaded plugins: fastestmirror
+    m-k8s: Loading mirror speeds from cached hostfile
+    m-k8s: * base: mirror.kakao.com
+    m-k8s: * extras: mirror.kakao.com
+    m-k8s: * updates: mirror.navercorp.com
+    m-k8s: Resolving Dependencies
+    m-k8s: --> Running transaction check
+    m-k8s: ---> Package epel-release.noarch 0:7-11 will be installed
+    m-k8s: --> Finished Dependency Resolution
+[생략]
+```
+
+<br/>
+
+2. vagrant ssh 명령을 실행해 CentOS에 접속한다.
+```
+c:\HashiCorp>vagrant ssh
+[vagrant@m-k8s ~]$
+```
+
+<br/>
+
+3. yum repolist 명령으로 추가한 EPEL 저장소가 구성됐는지 확인한다.
+```
+[vagrant@m-k8s ~]$ yum repolist
+Loaded plugins: fastestmirror
+Determining fastest mirrors
+* base: mirror.navercorp.com
+* epel: ftp.jaist.ac.jp
+* extras: mirror.navercorp.com
+* updates: mirror.navercorp.com
+repo id                      repo name status
+base/7/x86_64                CentOS-7 - Base 10,070
+epel/x86_64                  Extra Packages for Enterprise Linux 7 - x86_64 13,425
+extras/7/x86_64              CentOS-7 - Extras 41
+updates/7/x86_64             CentOS-7 - Updates 945
+repolist: 24,852
+```
+
+<br/>
+
+4. vi .bashrc를 실행해 문법 하이라이트가 적용됐는지 확인한다.
+```
+[vagrant@m-k8s ~]$ vi .bashrc
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# Uncomment the following line if you don't like systemctl's auto-paging feature:
+# export SYSTEMD_PAGER=
+
+# User specific aliases and functions
+~
+~
+~
+```
+
+<br/>
+
+5. vi로 문법 하이라이트가 적용된 것을 확인했다면 :q를 눌러서 vi 프로그램을 종료하고, exit 명령으로 가상 머신에서 빠져나온다. 그 다음 vagrant destroy -f 명령으로 베이그런트를 사용해 생성한 가상 머신을 삭제한다.
+```
+[vagrant@m-k8s ~]$ exit
+logout
+Connection to 127.0.0.1 closed.
+c:\HashiCorp>vagrant destroy -f
+==> m-k8s: Forcing shutdown of VM...
+==> m-k8s: Destroying VM and associated drives...
+```
+
+<br/>
+
+#### vi와 Vim
+- Vim의 추가 기능을 설치한다고 했는데 vi(visual editor) 에디터를 사용해서 의문이 들 수도 있다. 대부분 리눅스는 vi를 호출하면 내부적으로 Vim(Vi Improved, 향상된 vi)이 실행되기 때문에 vi를 호출해 사용했다. 하지만 여전히 일부 리눅스와 유닉스에서는 vi만 설치돼 있는 경우가 있다.
+- vi와 Vim의 다른 점은 많지만, 가장 큰 차이점은 '에디터에서 커서의 이동이 화살표로 되는가 아닌가'이다. Vim은 화살표로 커서가 이동하지만, 순수하게 vi만 설치돼 있다면  H(⇦) J(⇩) K(⇧) L(⇨)로 커서를 이동할 수 있다.
+
+<br/><br/>
+
+### 2.2.3 가상 머신 추가로 구성하기
+- 베이그런트로 운영 체제를 자동으로 설치하고 구성하면 편리하다. 하지만 단순히 운영 체제 1개를 구성하려고 베이그런트를 사용하지는 않는다. 그래서 이번에는 기존에 설치한 가상 머신 외에 가상 머신 3대를 추가로 설치한다. 그리고 기존의 가상 머신과 추가한 가상 머신 간에 네트워크 통신이 원할하게 작동하는지 확인해 보자.
+
+<br/>
+
+#### CentOS 3대를 추가로 구성한 테스트 환경
+![image](https://user-images.githubusercontent.com/61584142/161177476-b8c71ffb-4e23-4010-9cd9-c08658ceca68.png)
+
+<br/><br/>
+
+#### 코드 입력
+- Vagrantfile에 CentOS 3대와 네트워크 구성을 테스트할 파일을 추가한다.
+```
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+ 
+Vagrant.configure("2") do |config|
+  config.vm.define "m-k8s" do |cfg|
+    cfg.vm.box = "sysnet4admin/CentOS-k8s"
+    cfg.vm.provider "virtualbox" do |vb|
+      vb.name = "m-k8s(github_SysNet4Admin)"
+      vb.cpus = 2
+      vb.memory = 2048
+      vb.customize ["modifyvm", :id, "--groups", "/k8s-SM(github_SysNet4Admin)"]
+    end
+    cfg.vm.host_name = "m-k8s"
+    cfg.vm.network "private_network", ip: "192.168.1.10"
+    cfg.vm.network "forwarded_port", guest: 22, host: 60010, auto_correct: true, id: "ssh"
+    cfg.vm.synced_folder "../data", "/vagrant", disabled: true
+    cfg.vm.provision "shell", path: "install_pkg.sh"
+    cfg.vm.provision "file", source: "ping_2_nds.sh", destination: "ping_2_nds.sh"
+    cfg.vm.provision "shell", path: "config.sh"
+  end
+ 
+  #=============#
+  # Added Nodes #
+  #=============#
+ 
+  (1..3).each do |i| # 1부터 3까지 3개의 인자를 반복해 i로 입력
+    config.vm.define "w#{i}-k8s" do |cfg| # {i} 값이 1, 2, 3으로 차례대로 치환됨
+      cfg.vm.box = "sysnet4admin/CentOS-k8s"
+      cfg.vm.provider "virtualbox" do |vb|
+        vb.name = "w#{i}-k8s(github_SysNet4Admin)" # {i} 값이 1, 2, 3으로 차례대로 치환됨
+        vb.cpus = 1
+        vb.memory = 1024 # 메모리를 1GB 사용하도록 변경
+        vb.customize ["modifyvm", :id, "--groups", "/k8s-SM(github_SysNet4Admin)"]
+      end
+      cfg.vm.host_name = "w#{i}-k8s" # {i} 값이 1, 2, 3으로 차례대로 치환됨
+      cfg.vm.network "private_network", ip: "192.168.1.10#{i}" # {i} 값이 1, 2, 3으로 차례대로 치환됨
+      cfg.vm.network "forwarded_port", guest: 22, host: "6010#{i}",auto_correct: true, id: "ssh" # {i} 값이 1, 2, 3으로 차례대로 치환됨
+      cfg.vm.synced_folder "../data", "/vagrant", disabled: true
+      cfg.vm.provision "shell", path: "install_pkg.sh"
+    end
+  end
+end
+```
+```
+• 18번째 줄: 파일을 게스트 운영 체제에 전달하기 위해 "shell"이 아닌 "file" 구문으로 변경합니다. 이렇게 하면 호스트에 있는 ping_2_nds.sh 파일을 게스트의 홈 디렉터리(/home/vagrant)로 전달합니다.
+
+• 19번째 줄: config.sh를 게스트에서 실행합니다.
+
+• 26~37번째 줄: 추가한 3대의 CentOS에 대한 구성입니다. 거의 모든 내용이 기존에 CentOS와 동일하나, 3대를 효율적으로 구성하기 위해 반복문을 사용합니다. 반복은 (1..3).each로 이루어지며, 해당 값은 |i|를 통해 #{i}로 치환돼 사용됩니다.
+```
+
+<br/>
+
+- 이전처럼 추가 패키지를 설치하는 스크립트를 작성한다.(install_pkg.sh)
+```
+#!/usr/bin/env bash
+# install packages
+yum install epel-release -y
+yum install vim-enhanced -y
+```
+
+<br/>
+
+- ping 테스트 파일을 작성한다.(ping_2_nds.sh)
+```
+# ping 3 times per nodes
+ping 192.168.1.101 -c 3
+ping 192.168.1.102 -c 3
+ping 192.168.1.103 -c 3
+```
+- 추가로 설치한 CentOS 3대로 ping을 보내 네트워크가 제대로 작동하는지 확인하는 명령이다.
+- -c 옵션은 몇 번의 ping을 보낼 것인지 지정한다.
+
+<br/>
+
+- 이번엔 설정을 변경하는 스크립트를 작성한다.(config.sh)
+```
+#!/usr/bin/env bash
+# modify permission
+chmod 744 ./ping_2_nds.sh
+```
+- ping 테스트 파일(ping_2_nds.sh)이 업로드되고 난 후에 실행할 수 있도록 권한을 744로 준다.
+
+<br/>
+
+#### 파일 권한 744의 의미
+
+![image](https://user-images.githubusercontent.com/61584142/161177745-b575e974-19bd-4337-9237-725f148c1e69.png)
+
+<br/><br/>
+
+#### 코드 실행
+- 4대의 가상 머신을 구성해 보자. 앞에 작성한 파일들을 Vagrantfile과 같은 위치에 저장한다.
+
+<br/>
+
+1. vagrant up을 실행해 총 4대의 CentOS를 설치하고 구성한다.
+```
+c:\HashiCorp>vagrant up
+Bringing machine 'm-k8s' up with 'virtualbox' provider...
+Bringing machine 'w1-k8s' up with 'virtualbox' provider...
+Bringing machine 'w2-k8s' up with 'virtualbox' provider...
+Bringing machine 'w3-k8s' up with 'virtualbox' provider...
+==> m-k8s: Importing base box 'sysnet4admin/CentOS-k8s'...
+==> m-k8s: Matching MAC address for NAT networking...
+[생략]
+```
+
+<br/>
+
+2. vagrant ssh 명령으로 설치된 CentOS에 접속한다. 설치된 가상 머신이 여러 대라서 접속할 가상 머신의 이름을 입력해야 한다는 메시지가 출력된다.
+```
+c:\HashiCorp>vagrant ssh
+This command requires a specific VM name to target in a multi-VM environment.
+```
+
+<br/>
+
+3. vagrant ssh m-k8s를 입력한다. m-ks는 가장 먼저 설치된 가상 머신의 이름이다.
+```
+c:\HashiCorp>vagrant ssh m-k8s
+[vagrant@m-k8s ~]$
+```
+
+<br/>
+
+4. 업로드된 ping_2_nds.sh 파일을 실행해 3대의 CentOS(192.168.101~103)와 통신하는 데 문제가 없는지 확인한다.
+```
+[vagrant@m-k8s ~]$ ./ping_2_nds.sh
+PING 192.168.1.101 (192.168.1.101) 56(84) bytes of data.
+64 bytes from 192.168.1.101: icmp_seq=1 ttl=64 time=0.750 ms
+64 bytes from 192.168.1.101: icmp_seq=2 ttl=64 time=0.606 ms
+64 bytes from 192.168.1.101: icmp_seq=3 ttl=64 time=0.770 ms
+
+--- 192.168.1.101 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2008ms
+rtt min/avg/max/mdev = 0.606/0.708/0.770/0.079 ms
+PING 192.168.1.102 (192.168.1.102) 56(84) bytes of data.
+64 bytes from 192.168.1.102: icmp_seq=1 ttl=64 time=4.42 ms
+64 bytes from 192.168.1.102: icmp_seq=2 ttl=64 time=0.792 ms
+64 bytes from 192.168.1.102: icmp_seq=3 ttl=64 time=0.812 ms
+
+--- 192.168.1.102 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2001ms
+rtt min/avg/max/mdev = 0.792/2.008/4.422/1.707 ms
+PING 192.168.1.103 (192.168.1.103) 56(84) bytes of data.
+64 bytes from 192.168.1.103: icmp_seq=1 ttl=64 time=3.64 ms
+64 bytes from 192.168.1.103: icmp_seq=2 ttl=64 time=0.684 ms
+64 bytes from 192.168.1.103: icmp_seq=3 ttl=64 time=0.834 ms
+
+--- 192.168.1.103 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2004ms
+rtt min/avg/max/mdev = 0.684/1.720/3.643/1.361 ms
+```
+
+<br/>
+
+5. 4대 모두 이상 없음이 확인됐으니 exit 명령으로 가상 머신 접속을 종료한다.
+```
+[vagrant@m-k8s ~]$ exit
+logout
+```
+
+<br/><br/><br/><br/>
+
+## 2.3 터미널 프로그램으로 가상 머신 접속하기
+- 윈도우의 명령 프롬프트로 가상 머신에 접근(vagrant ssh `가상 머신 이름`)할 수 있지만, 이미 확인한 것처럼 여러 개의 가상 머신에 접근할 때는 유용한 방법이 아니다. 그래서 여기서는 여러 대의 가상 머신에 한번에 접속하도록 구성해 보자.
+
+<br/><br/>
+
+### 2.3.1 Putty 설치하기
+- 터미널 접속 프로그램 중에서 가장 많이 사용하는 것이 푸티(PuTTY)이다. 푸티는 가볍고 무료이며 다양한 플러그인을 통해 여러 대의 가상 머신에 접근할 수 있다. 이뿐만 아니라 접속 정보를 저장하고 바로 불러와 실행할 수 있는 기능이 있다. 여기서는 푸티로 가상머신에 접근하도록 설정해 보자.
+
+<br/>
+
+1. 먼저 푸티 실행 파일을 저장할 디렉터리(C:\putty)를 생성한다.
+```
+c:\HashiCorp>mkdir C:\putty
+```
+
+<br/>
+
+2. 웹 브라우저에서 푸티 다운로드 페이지(https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html)에 접속한다. Alternative binary files 항목에서 운영 체제 및 버전에 맞는 putty.exe 실행 파일을 C:\putty 디렉터리에 내려받는다.
+
+![image](https://user-images.githubusercontent.com/61584142/161178502-c1f5cb02-fb6e-442a-adde-0c3731a7bca1.png)
+
+<br/>
+
+3. 내려받은 putty.exe 파일을 실행해 정상적으로 구동하는지 확인한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161178522-09903af6-4e79-4d9f-9804-175e21bcee1f.png)
+
+<br/>
+
+- 푸티로 여러 대 가상 머신에 접근할 수 있지만, 한 번에 한 대씩만 접근할 수 있다. 우리가 원하는 것은 한 번에 여러 대의 가상 머신에 접근해서 관리하는 것이므로 추가 프로그램을 설치한다.
+
+<br/><br/>
+
+### 2.3.2 슈퍼푸티 설치하기
+- 푸티를 단독으로 사용하면 창을 여러 개 띄워야 해서 명령을 내리기가 매우 번거롭다. 슈퍼푸티(SuperPuTTY)를 사용하면 푸티의 이런 제약 사항이 해결된다.
+
+<br/>
+
+1. 웹 브라우저에서 슈퍼푸티를 제공하는 깃허브 페이지(https://github.com/jimradford/superputty/releases)에 접속해 화면에 보이는 최신 버전 파일을 내려받는다.
+
+![image](https://user-images.githubusercontent.com/61584142/161178619-97c9eda9-b723-40a4-9e32-918ad55377e9.png)
+
+<br/>
+
+2. 내려받은 SuperPuttySetup-1.4.0.9.msi를 실행하고 설치 환영 메시지가 나오면 Next 버튼을 클릭한다.
+3. 라이선스 동의에 체크하고, Next 버튼을 클릭한다.
+4. 슈퍼푸티가 설치될 위치는 기본값으로 두고 Next 버튼을 클릭한다.
+5. 설치할 준비가 끝나면 Install 버튼을 클릭한다. ‘게시자를 알 수 없는 앱의 설치’ 창이 뜨면 동의하고 설치를 계속 진행한다.
+6. 슈퍼푸티 설치가 완료되면 Finish 버튼을 클릭해 슈퍼푸티를 실행한다.
+7. 슈퍼푸티는 푸티를 통해 실행되므로 푸티의 위치를 지정해야 한다. 다음 화면이 보이면 putty.exe Location 옆의 Browse 버튼을 클릭해 푸티의 위치를 지정한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161178744-b80d0626-d76f-48a9-a6cf-af88dd8e661d.png)
+
+<br/>
+
+8. C:\putty에서 putty.exe를 찾아 선택하고 열기 버튼을 누른다.
+9. 푸티 실행 경로가 지정된 것을 확인하면 Ok 버튼을 클릭한다.
+10.슈퍼푸티가 정상적으로 실행되는지 확인한다.
+
+<br/><br/>
+
+### 2.3.3 슈퍼푸티로 다수의 가상 머신 접속하기
+- 슈퍼푸티로 ‘2.2.3 가상 머신 추가로 구성하기’에서 설치한 가상 머신 4대(m-k8s, w1-k8s, w2-k8s, w3-k8s)에 접속해 보자. 반복적으로 사용할 가상 머신의 접속 정보부터 슈퍼푸티에 구성한다.
+
+<br/>
+
+1. 먼저 새로운 세션 디렉터리를 생성한다. 슈퍼푸티 화면 오른쪽에 위치한 Sessions 창의 PuTTY Sessions에서 마우스 오른쪽 버튼을 클릭하고, New Folder를 클릭한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161178860-3b92bc53-ae22-4c88-9b92-f554bea5cacb.png)
+
+<br/>
+
+2. 접속 정보 입력 창에서 k8s를 입력하고, OK 버튼을 클릭한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161178882-052c2dd8-880d-4182-a111-ded661ef989e.png)
+
+<br/>
+
+3. 새로 추가된 k8s 디렉터리에서 마우스 오른쪽 버튼을 클릭하고 New 메뉴를 선택한다(추가된 디렉터리가 보이지 않으면 PuTTY Sessions를 더블클릭).
+
+![image](https://user-images.githubusercontent.com/61584142/161178910-5ab09063-ea6d-4daf-aa54-05f655a22316.png)
+
+<br/>
+
+4. 가상 머신의 정보를 입력하는 창에 다음과 같이 입력하고 Save 버튼을 클릭한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161178932-5f56307c-1716-48f9-8fc2-c0c4709995b5.png)
+
+<br/>
+
+#### 127.0.0.1로 접속하는 이유
+- 현재 가상 머신들은 192.168.1.0/24 영역대에 있어서 대부분의 경우 모두 접속할 수 있다. 하지만 현업에서는 데이터 통신과 관리 네트워크를 분리해 사용하는데, 이와 비슷하게 관리 네트워크를 분리한 것으로 보면 된다. 또한 127.0.0.1로 접속하면 192.168.1.0/24에서 문제가 발생해도 접속하는 데 문제가 없다.
+- 각 가상 머신은 베이그런트에서 NAT로 사용하는 eth0에 고유의 포트 포워딩 규칙이 적용된다.
+
+<br/>
+
+##### 버추얼박스에 설정된 포트 포워딩 규칙
+- 각 가상 머신의 설정 > 네트워크 > 고급 > 포트 포워딩을 누르면 확인이 가능하다.
+![image](https://user-images.githubusercontent.com/61584142/161178970-5dc8030e-34a6-4496-8354-922cc5fa502c.png)
+
+<br/>
+
+- Vagrantfile에서는 다음과 같이 설정했다.
+```
+[중략]
+cfg.vm.network "private_network", ip: "192.168.1.10"
+cfg.vm.network "forwarded_port", guest: 22, host: 60010, auto_correct: true, id: "ssh"
+cfg.vm.synced_folder "../data", "/vagrant", disabled: true
+[생략]
+```
+
+<br/>
+
+5. Extra PuTTY Arguments에 입력된 -pw vagrant는 평문으로 저장되기 때문에 보안상 위험하다는 내용을 안내하는 창이 뜬다. 여기서는 테스트 환경이므로 편의를 위해 그대로 평문으로 진행한다. 확인 버튼을 클릭한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179104-47f0cf16-fe65-4b18-8a40-cf7316aaff72.png)
+
+<br/>
+
+6. m-k8s에서 마우스 오른쪽 버튼을 클릭한다. 메뉴에서 Copy As를 선택해 m-k8s의 접속 정보를 그대로 복사한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179117-a08d1020-aaa2-4f00-9d10-7ff43f7c93cc.png)
+
+<br/>
+
+7. 복사한 접속 정보에서 표시된 부분만 맞춰서 수정하고 Save 버튼을 클릭해 저장한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179137-67585f5c-a8db-4c28-b048-c00a7b1ff511.png)
+
+<br/>
+
+8. 6번과 7번 과정을 반복해 w2-k8s와 w3-k8s의 접속 정보를 추가로 생성한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179171-f95348bb-4592-49bf-a003-c7a158cda9ad.png)
+![image](https://user-images.githubusercontent.com/61584142/161179172-2575f1f2-a807-4472-9521-9164dd7cb0e2.png)
+
+<br/>
+
+9. 평문으로 접속하려면 슈퍼푸티의 보안 설정을 변경해야 한다. F2를 누르거나 메뉴에서 Tools > Options를 선택한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179208-15892790-2dbc-4485-b0d9-dc616fb4aeeb.png)
+
+<br/>
+
+10. GUI 탭에서 Allow plain text passwords on putty command line 항목을 체크하고 Ok 버튼을 클릭한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179218-79aef400-aaae-4bdc-abdb-2efca3413728.png)
+
+<br/>
+
+11. k8s 디렉터리에서 마우스 오른쪽 버튼을 누르고, Connect All을 선택해 모든 가상 머신에 한 번에 접속한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179242-87c47b81-f7b7-4f00-9b4b-0538785fb105.png)
+
+<br/>
+
+12. 슈퍼푸티가 푸티를 호출하면서 발생한 파일 열기-보안 경고 창을 확인한다. 다음부터 이 경고 창이 보이지 않도록 이 파일을 열기 전에 항상 확인에 대한 체크를 해제한다. 그리고 가상 머신의 수(4개)만큼 실행 버튼을 클릭한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179272-f2dce606-75b1-40ec-a364-be10b5c7aa69.png)
+
+<br/>
+
+13. 추가로 발생하는 보안 경고(PuTTY Security Alert) 창이 나오면 예 버튼을 클릭한다. 이 보안 경고는 known_hosts(알려진 호스트)가 없어서 발생하는 경고로 예를 누르면 known_hosts를 등록한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179298-9af8a6f0-2cdb-417b-b6a6-3bc563e13e74.png)
+
+<br/>
+
+14. 가상 머신에 접속되는지 확인한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179313-e89c76fc-619c-4997-9338-fd76e32097a3.png)
+
+<br/>
+
+15. 가상 머신의 작동을 한눈에 확인하기 위해 창을 분리 배치해 보자. 우선 w1-k8s 탭에서 마우스 왼쪽 버튼을 클릭한 상태에서 드래그 앤 드롭으로 오른쪽 창으로 분리한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179350-d23e8376-5501-44f2-ad94-44ce5f1dca3c.png)
+
+<br/>
+
+16. 이번에는 w2-k8s를 왼쪽 하단으로 분할한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179369-e56be672-3a6d-4262-a3cc-77d72aa60a2c.png)
+
+<br/>
+
+17. 마지막으로 w3-k8s를 오른쪽 하단으로 분리한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179388-56ed7b69-4602-469b-9416-5e4d418bd96c.png)
+
+<br/>
+
+18. 4개의 창에 한 번에 명령이 실행되는지 명령(commands) 창에서 hostname을 입력해 확인한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179400-7f9d6a6c-0537-4de0-ba2b-07635e349daf.png)
+
+<br/>
+
+19. 4개 창에서 hostname(m-k8s, w1-k8s, w2-k8s, w3-k8s)에 해당하는 값이 출력된다.
+
+![image](https://user-images.githubusercontent.com/61584142/161179427-1ff0f8d2-036c-4b2e-ac05-5424ebc37828.png)
+
+<br/>
+
+20. 확인이 끝났으니 다음 실습을 위해 가상 머신을 모두 삭제한다. 명령 프롬프트에서 vagrant destroy -f를 실행한다.
+```
+c:\HashiCorp>vagrant destroy -f
+==> default: Forcing shutdown of VM...
+==> default: Destroying VM and associated drives...
+```
+
+<br/>
+
+- 컨테이너 인프라 환경을 만들기 위한 도구인 베이그런트와 버추얼박스가 무엇인지 살펴보고 실습해봤다.
+- 이 도구들을 이용하면 우리가 원하는 형태의 실습 환경을 자유자재로 구성할 수 있다.
+
+---
+
+<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
+
+---
+
+# 3. 컨테이너를 다루는 표준 아키텍처, 쿠버네티스
+- **컨테이너 인프라 환경** 이란 리눅스 운영 체제의 커널 하나에서 여러 개의 컨테이너가 격리된 상태로 실행되는 인프라 환경을 말한다. 여기서 컨테이너는 하나 이상의 목적을 위해 독립적으로 작동하는 프로세스다. 좀 더 간단하게 말하면 친구와 대화를 주고받는 메신저 프로그램이나 음악 감상 프로그램을 컨테이너로 구현할 수 있다.
+
+<br/>
+
+- 개인 환경에서는 1명의 관리자(사용자)가 다양한 응용프로그램을 사용하므로 각각의 프로그램을 컨테이너로 구현할 필요가 거의 없다. 하지만 기업 환경에서는 다수의 관리자가 수백 또는 수천 대의 서버를 함께 관리하기 때문에 일관성을 유지하는 것이 매우 중요하다.
+
+<br/>
+
+- 이런 경우 컨테이너 인프라 환경을 구성하면 눈송이 서버(여러 사람이 만져서 설정의 일관성이 떨어진 서버)를 방지하는 데 효과적이다.
+
+![image](https://user-images.githubusercontent.com/61584142/161184070-7a19d4da-508c-462b-a7f8-4841fd1b0469.png)
+
+<br/>
+
+- 또한 가상화 환경에서는 각각의 가상 머신이 모두 독립적인 운영 체제 커널을 가지고 있어야 하기 때문에 그만큼 자원을 더 소모해야 하고 성능이 떨어질 수 밖에 없다. 하지만 컨테이너 인프라 환경은 운영 체제 커널 하나에 컨테이너 여러 개가 격리된 형태로 실행되기 때문에 자원을 효율적으로 사용할 수 있고 거치는 단계가 적어서 속도도 훨씬 빠르다.
+
+![image](https://user-images.githubusercontent.com/61584142/161184251-3571ed3a-ee78-4596-9b44-e53037680f1f.png)
+
+<br/>
+
+- 컨테이너 인프라 환경이 처음부터 주목받았던 것은 아니다. 이미 가상화 환경에서 상용 솔루션(VMware)을 이용해 안정적으로 시스템을 운용하고 있었고, 기술 성숙도가 높아 문제없이 관리되고 있었다. 그러다 시간이 지나 커널을 공유해 더 많은 애플리케이션을 올릴 수 있는 컨테이너가 도입되기 시작하면서 늘어난 컨테이너를 관리해야 했다. 하지만 기존의 컨테이너 관리 솔루션(Docker Swarm, Mesos, Nomad 등)들은 현업의 요구 사항을 충족시키기에는 부족한 점이 있었다. 그래서 컨테이너 인프라 환경이 주는 장점이 많이 있음에도 컨테이너 관리 문제 때문에 보편화되기가 어려웠다.
+
+<br/>
+
+- 하지만 그 이후 컨테이너 인프라 환경이 성장하게 된 결정적인 계기가 된 사건이 일어난다. 구글이 **쿠버네티스(Kubernetes)** 를 오픈 소스로 공개한 것이다. 구글은 2014년 자사에서 컨테이너 운영 플랫폼으로 운영하던 보그(Borg)를 기반으로 하는 쿠버네티스를 오픈 소스화하고 2015년 7월 21일 쿠버네티스 버전 1.0을 출시했다. 구글은 리눅스 재단(Linux Foundation)과 파느터십을 맺고 클라우드 네이티브 컴퓨팅 재단(CNCF, Cloud Native Computing Foundation)을 설립했으며 쿠버네티스를 기초 기술(seed technology)로 제공했다.
+
+<br/>
+
+- 이를 통해 안정적인 쿠버네티스를 누구나 자유롭게 이용하게 되면서 컨테이너 인프라 환경을 좀 더 효율적으로 관리할 수 있게 됐다. 이후 여러 기능이 계속 추가되면서 쿠버네티스의 생태계가 풍부해졌고, 사실상 쿠버네티스는 컨테이너 인프라 관리 솔루션의 표준으로 자리 잡게 됐다.
+
+<br/>
+
+- 이제부터 쿠버네티스로 직접 실습해 보면서 컨테이너 인프라 환경을 전반적으로 이해하고 쿠버네티스가 어떤 강점이 있기에 컨테이너 인프라 환경에서 표준이 될 수 있었는지 알아보자.
+
+![image](https://user-images.githubusercontent.com/61584142/161184715-10001847-ad78-42b5-9d68-107521cce414.png)
+
+<br/><br/><br/><br/>
+
+## 3.1 쿠버네티스 이해하기
+- 쿠버네티스를 컨테이너 관리 도구라고 설명했지만, 실제로 쿠버네티스는 **컨테이너 오케스트레이션** 을 위한 솔루션이다. **오케스트레이션(Orchestration)** 이란 복잡한 단계를 관리하고 요소들의 유기적인 관계를 미리 정의해 손쉽게 사용하도록 서비스를 제공하는 것을 의미한다. 다수의 컨테이너를 유기적으로 연결, 실행, 종료할 뿐만 아니라 상태를 추적하고 보존하는 등 컨테이너를 안정적으로 사용할 수 있게 만들어주는 것이 컨테이너 오케스트레이션이다.
+
+<br/><br/>
+
+### 3.1.1 왜 쿠버네티스일까
+- 컨테이너 오케스트레이션을 제공하는 대표적인 솔루션은 다음과 같다.
+
+![image](https://user-images.githubusercontent.com/61584142/161184928-6474bf17-3646-47a9-a06c-d8605fbb339b.png)
+
+<br/>
+
+#### 솔루션마다 어떤 장단점이 있는지 살펴보자.
+##### 도커 스웜(Docker Swarm)
+- 간단하게 설치할 수 있고 사용하기도 용이하다. 그러나 그만큼 기능이 다양하지 않아 대규모 환경에 적용하려면 사용자 환경을 변경해야 할 수 있다. 따라서 소규모 환경에서는 유용하지만 대규모 환경에서는 잘 사용하지 않는 편이다.
+
+<br/>
+
+##### 메소스(Mesos)
+- 아파치(Apache)의 오픈 소스 프로젝트로 역사와 전통이 있는 클러스터 도구이며 트위터, 에어비앤비, 애플, 우버 등 다양한 곳에서 이미 검증된 솔루션이다. 메소스는 2016년 DC/OS(Data Center OS, 대규모 서버 환경에서 자원을 유연하게 공유하며 하나의 자원처럼 관리하는 도구)의 지원으로 매우 간결해졌다. 하지만 기능을 충분히 활용하려면 분산 관리 시스템과 연동해야 한다. 따라서 여러 가지 솔루션을 유기적으로 구성해야 하는 부담이 있다.
+
+<br/>
+
+##### 노매드(Nomad)
+- 베이그런트를 만든 해시코프(HashiCorp)사의 컨테이너 오케스트레이션으로, 베이그런트처럼 간단한 구성으로 컨테이너 오케스트레이션 환경을 제공한다. 하지만 도커 스웜과 마찬가지로 기능이 부족하므로 복잡하게 여러 기능을 사용하는 환경이 아닌 가볍고 간단한 기능만 필요한 환경에서 사용하기를 권장한다. 해시코프의 Consul(서비스 검색, 구성 및 분할 기능 제공)과 Vault(암호화 저장소)와의 연동이 원할하므로 이런 도구에 대한 사용 성숙도가 높은 조직이라면 노매드 도입을 고려해볼 수 있다.
+
+<br/>
+
+##### 쿠버네티스
+- 다른 오케스트레이션 솔루션보다는 시작하는 데 어려움이 있지만, 쉽게 사용할 수 있도록 도와주는 도구들이 있어서 설치가 쉬워지는 추세다. 또한 다양한 형태의 쿠버네티스가 지속적으로 계속 발전되고 있어서 컨테이너 오케스트레이션을 넘어 IT 인프라 자체를 컨테이너화하고, 컨테이너화된 인프라 제품군을 쿠버네티스 위에서 동작할 수 있게 만든다. 즉 거의 모든 벤더와 오픈 소스 진영 모두에서 쿠버네티스를 지원하고 그에 맞게 통합 개발하고 있다. 그러므로 컨테이너 오케이스트레이션을 학습하거나 도입하려고 한다면 쿠버네티스를 우선적으로 고려해야 한다.
+
+<br/>
+
+#### 각 솔루션의 기능을 표로 정리하면 다음과 같다.
+
+![image](https://user-images.githubusercontent.com/61584142/161185150-2c960ce1-e283-4f0c-a9e6-b71c0617a092.png)
+
+<br/>
+
+- 2021년을 기준으로 대부분 IT 기업에서는 쿠버네티스와 관련된 프로젝트를 진행하고 있거나 이미 자사 솔루션으로 흡수 및 통합했다. 이에 따라 다양한 종류의 솔루션이 쿠버네티스에 통합되고 있다. 그러므로 컨테이너 오케스트레이션을 한다면 쿠버네티스를 우선으로 고려해야 한다.
+
+<br/>
+
+#### k8s의 의미
+- 쿠버네티스(Kubernetes)를 검색하다 보면 k8s이라는 표현을 종종 보게 된다. k8s는 쿠버네티스(Kubernetes)의 약어이다. 왜 k8s일까? 일반적으로 대부분의 약어는 두 단어 이상으로 이루어진 긴 단어에서 각 단어의 한 음절씩 뽑아서 만드는데, 쿠버네티스는 그 이름 자체가 하나의 긴 단어이기 때문에 문자 수를 표시하는 방법으로 약어를 만들었다. k8(ubernete, 8글자)s의 형식으로. 쿠버네티스와 k8s는 자주 혼용하니 여기서나 다른 자료에서 같은 단어로 보면 된다. 참고로 쿠버네티스는 그리스어로 도선사(pilot, 배를 수로로 안전하게 안내하는 사람)나 조타수(helmsman, 배의 키를 조정해 올바른 방향으로 나아가게 하는 사람)를 의미한다.
+
+<br/><br/>
+
+### 3.1.2 쿠버네티스 구성 방법
+- 쿠버네티스를 구성하는 방법은 크게 3가지이다.
+
+<br/>
+
+1. 퍼블릭 클라우드 업체에서 제공하는 관리형 쿠버네티스인 EKS(Amazon Elastic Kubernetes Service), AKS(Azure Kubernetes Services), GKE(Google Kubernetes Engine) 등을 사용한다. 구성이 이미 다 갖춰져 있고 마스터 노드를 클라우드 업체에서 관리하기 때문에 학습용으로는 적합하지 않다.
+
+![image](https://user-images.githubusercontent.com/61584142/161185428-55151abb-019d-4284-85aa-2abdac1ba011.png)
+
+<br/>
+
+2. 수세의 Rancher, 레드햇의 OpenShift와 같은 플랫폼에서 제공하는 설치형 쿠버네티스를 사용한다. 하지만 유료라 쉽게 접근하기 어렵다.
+
+![image](https://user-images.githubusercontent.com/61584142/161185457-40808ddc-506c-4591-8e2d-05b44de496ae.png)
+
+<br/>
+
+3. 사용하는 시스템에 쿠버네티스 클러스터를 자동으로 구성해주는 솔루션을 사용한다. 주요 솔루션으로는 kubeadm, kops(Kubernetes Operations), KRIB(Kubernetes Rebar Integrated Bootstrap), kubespray가 있다. 4가지의 주요 솔루션 중에 kubeadm이 가장 널리 알려져 있다. kubeadm은 사용자가 변경하기도 수월하고, 온프레미스(On-Premises)와 클라우드를 모두 지원하며, 배우기도 쉽다. 이러한 솔루션들을 구성형 쿠버네티스라고 한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161185501-73ffafb2-6567-43c9-8be0-ff07b92147d1.png)
+
+<br/>
+
+#### 쿠버네티스 클러스터 구성 솔루션 비교
+
+![image](https://user-images.githubusercontent.com/61584142/161185534-4b7aad7f-a9f1-4e13-9b51-ad516676ff34.png)
+
+<br/><br/>
+
+### 3.1.3 쿠버네티스 구성하기
+- 여기서는 학습을 위해 사용자 설정이 가장 많이 필요한 kubeadm으로 쿠버네티스를 구성하겠다. 또한 쿠버네티스가 설치되는 서버 노드는 가상 머신을 이용해 실제 온프레미스에 가깝게 구성한다. 그리고 설치되는 과정을 베이그런트로 자동화해 필요하면 쿠버네티스 테스트 환경을 재구성할 수 있게 하겠다.
+
+<br/>
+
+- 이제 2장에서 사용했던 베이그런트를 이용해 쿠버네티스 테스트 환경을 구축해보자. 편의를 위해 미리 만들어진 베이그런트 스크립트 파일로 쿠버네티스 테스트 환경을 구축하겠다.
+
+<br/>
+
+1. 쿠버네티스 실습 환경을 만들어 줄 베이그런트 스크립트 파일과 실습에 사용할 소스 코드 파일들을 내려받는다. 해당 파일은 깃허브에서 제공한다. 웹 브라우저 주소 창에 `https://github.com/sysnet4admin/_Book_k8sInfra`를 입력해 깃허브 저장소(Github Repository)로 이동한다. 다음과 같은 화면이 보이면 우측 상단의 Code 버튼을 클릭한다. 내려받기 옵션 중에 Download ZIP을 눌러서 직접 호스트 시스템(현재 윈도)로 파일을 내려받는다.
+
+![image](https://user-images.githubusercontent.com/61584142/161185758-abd8afb3-3ce8-4cbe-87dd-9309d8126a9f.png)
+
+<br/>
+
+2. 내려받은 파일`(_Book_k8sInfra-main.zip)`을 C:\HashiCorp 폴더로 옮겨 압축을 풀고 폴더 내용이 다음과 같은지 확인한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161185788-e1e6a9fc-a4e3-45ca-a61a-a765298f6249.png)
+
+- 각 디렉터리에 담긴 파일들은 다음과 같다.
+```
+• app: 부록 실습에서 다루는 데 필요한 파일이 저장돼 있다.
+
+• ch2: 2장에서 사용했던 파일이 저장돼 있다.
+
+• ch3: 쿠버네티스 실습에 필요한 파일과 여러 가지 쿠버네티스를 효과적으로 체험할 수 있는 파일이 저장돼 있다.
+
+• ch4: 도커 실습에 필요한 파일과 스크립트가 저장돼 있다.
+
+• ch5: 젠킨스 실습 환경을 구축하는 데 필요한 파일과 효과적으로 실습할 수 있는 예제가 저장돼 있다.
+
+• ch6: 프로메테우스와 그라파나를 구성하는 데 필요한 파일과 효과적으로 실습할 수 있는 예제가 저장돼 있다.
+```
+
+<br/>
+
+3. `C:\HashiCorp/_Book_k8sInfra-main/ch3/3.1.3` 폴더로 가서 다음과 같이 실습에 필요한 파일들이 있는지 확인한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161185889-42eb288a-2699-4c6d-bfa0-5f9ed7712502.png)
+
+<br/>
+
+**해당 디렉터리에 있는 파일은 가상 머신으로 쿠버네티스 실습 환경을 구축하는 데 필요한 파일이다. 각 파일이 어떤 역할을 하고 어떤 내용을 담고 있는지 살펴보자.
+
+<br/>
+
+#### Vagrantfile
+- 베이그런트 프로비저닝을 위한 정보를 담고 있는 메인 파일이다. 
+- 명령 프롬프트를 실행하고 Vagrantfile이 있는 경로에서 vagrant up 명령을 입력하면 현재 호스트 내부에 Vagrantfile에 정의된 가상 머신들을 생성하고 생성한 가상 머신에 쿠버네티스 클러스트를 구성하기 위한 파일들을 호출해 쿠버네티스 클러스터를 자동으로 구성한다.
+
+```
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+ 
+Vagrant.configure("2") do |config|
+  N = 3 # max number of worker nodes 
+  Ver = '1.18.4' # Kubernetes Version to install
+ 
+  #=============#
+  # Master Node #
+  #=============#
+ 
+    config.vm.define "m-k8s" do |cfg|
+      cfg.vm.box = "sysnet4admin/CentOS-k8s"
+      cfg.vm.provider "virtualbox" do |vb|
+        vb.name = "m-k8s(github_SysNet4Admin)"
+        vb.cpus = 2
+        vb.memory = 3072
+        vb.customize ["modifyvm", :id, "--groups", "/k8s-SgMST-1.13.1(github_ SysNet4Admin)"]
+      end
+      cfg.vm.host_name = "m-k8s"
+      cfg.vm.network "private_network", ip: "192.168.1.10"
+      cfg.vm.network "forwarded_port", guest: 22, host: 60010, auto_correct: true,  id: "ssh"
+      cfg.vm.synced_folder "../data", "/vagrant", disabled: true 
+      cfg.vm.provision "shell", path: "config.sh", args: N
+      cfg.vm.provision "shell", path: "install_pkg.sh", args: [ Ver, "Main" ] 
+      cfg.vm.provision "shell", path: "master_node.sh"
+    end
+ 
+  #==============#
+  # Worker Nodes #
+  #==============#
+ 
+  (1..N).each do |i|
+    config.vm.define "w#{i}-k8s" do |cfg|    
+      cfg.vm.box = "sysnet4admin/CentOS-k8s"
+      cfg.vm.provider "virtualbox" do |vb|
+        vb.name = "w#{i}-k8s(github_SysNet4Admin)"
+        vb.cpus = 1
+        vb.memory = 2560
+        vb.customize ["modifyvm", :id, "--groups", "/k8s-SgMST-1.13.1(github_ SysNet4Admin)"]
+      end
+      cfg.vm.host_name = "w#{i}-k8s"
+      cfg.vm.network "private_network", ip: "192.168.1.10#{i}"
+      cfg.vm.network "forwarded_port", guest: 22, host: "6010#{i}", auto_correct:  true, id: "ssh"
+      cfg.vm.synced_folder "../data", "/vagrant", disabled: true
+      cfg.vm.provision "shell", path: "config.sh", args: N
+      cfg.vm.provision "shell", path: "install_pkg.sh", args: Ver
+      cfg.vm.provision "shell", path: "work_nodes.sh"
+    end
+  end
+ 
+end
+```
+```
+• 5번째 줄: 쿠버네티스에서 작업을 수행할 워커 노드의 수를 변수(N = 3)로 받습니다. 그리고 해당 변수를 24번째 줄(args: N)과 46번째 줄(args: N)에서 config.sh로 넘깁니다. 이는 사용자가 워커 노드의 개수를 직접 조절할 수 있게 합니다.
+
+• 6번째 줄: 쿠버네티스 버전을 사용자가 선택할 수 있도록 변수(Ver = '1.18.4')로 저장했습니다. 다른 쿠버네티스 버전을 사용하고 싶을 경우 해당 값을 변경하면 됩니다.
+
+• 25번째 줄: args: [ Ver, "Main" ] 코드를 추가해 쿠버네티스 버전 정보(Ver)와 Main이라는 문자를 install_pkg.sh로 넘깁니다. Ver 변수는 각 노드에 해당 버전의 쿠버네티스 버전을 설치하게 합니다. 두 번째 인자인 Main 문자는 install_pkg.sh에서 조건문으로 처리해 마스터 노드에만 이 책의 전체 실행 코드를 내려받게 합니다.
+
+• 26번째 줄/48번째 줄: 쿠버네티스 마스터 노드를 위한 master_node.sh와 워커 노드를 위한 work_nodes.sh 코드를 추가했습니다.
+```
+
+<br/>
+
+#### config.sh
+- kubeadm으로 쿠버네티스를 설치하기 위한 사전 조건을 설정하는 스크립트 파일이다. 
+- 쿠버네티스의 노드가 되는 가상 머신에 어떤 값을 설정하는지 알아보자.
+
+```
+#!/usr/bin/env bash
+ 
+# vim configuration 
+echo 'alias vi=vim' >> /etc/profile
+ 
+# swapoff -a to disable swapping
+swapoff -a
+# sed to comment the swap partition in /etc/fstab
+sed -i.bak -r 's/(.+ swap .+)/ #\1/' /etc/fstab
+ 
+# kubernetes repo
+gg_pkg="packages.cloud.google.com/yum/doc" # Due to shorten addr for key
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+gpgkey=https://${gg_pkg}/yum-key.gpg https://${gg_pkg}/rpm-package-key.gpg
+EOF
+ 
+# Set SELinux in permissive mode (effectively disabling it)
+setenforce 0
+sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+ 
+# RHEL/CentOS 7 have reported traffic issues being routed incorrectly due to iptables bypassed
+cat <<EOF >  /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+modprobe br_netfilter
+ 
+# local small dns & vagrant cannot parse and delivery shell code.
+echo "192.168.1.10 m-k8s" >> /etc/hosts
+for (( i=1; i<=$1; i++  )); do echo "192.168.1.10$i w$i-k8s" >> /etc/hosts; done
+ 
+# config DNS  
+cat <<EOF > /etc/resolv.conf
+nameserver 1.1.1.1 #cloudflare DNS
+nameserver 8.8.8.8 #Google DNS
+EOF
+```
+```
+• 4번째 줄: vi를 호출하면 vim을 호출하도록 프로파일에 입력합니다. 이렇게 하면 코드에 하이라이트를 넣어 코드를 쉽게 구분할 수 있습니다.
+
+• 7번째 줄: 쿠버네티스의 설치 요구 조건을 맞추기 위해 스왑되지 않도록 설정합니다.
+
+• 9번째 줄: 시스템이 다시 시작되더라도 스왑되지 않도록 설정합니다.
+
+• 12번째 줄: 쿠버네티스의 리포지터리를 설정하기 위한 경로가 너무 길어지지 않게 경로를 변수로 처리합니다.
+
+• 13~21번째 줄: 쿠버네티스를 내려받을 리포지터리를 설정하는 구문입니다.
+
+• 24~25번째 줄: selinux가 제한적으로 사용되지 않도록 permissive 모드로 변경합니다.
+
+• 28~31번째 줄: 브리지 네트워크를 통과하는 IPv4와 IPv6의 패킷을 iptables가 관리하게 설정합니다. 파드(Pod, 쿠버네티스에서 실행되는 객체의 최소 단위로, 뒤에서 자세히 설명할 예정)의 통신을 iptables로 제어합니다. 필요에 따라 IPVS(IP Virtual Server) 같은 방식으로도 구성할 수도 있습니다.
+
+• 32번째 줄: br_netfilter 커널 모듈을 사용해 브리지로 네트워크를 구성합니다. 이때 IP 마스커레이드(Masquerade)를 사용해 내부 네트워크와 외부 네트워크를 분리합니다. IP 마스커레이드는 쉽게 설명하면 커널에서 제공하는 NAT(Network Address Translation) 기능으로 이해하면 됩니다. 실제로는 br_netfilter를 적용함으로써 28~31번째 줄에서 적용한 iptables가 활성화됩니다.
+
+• 35~36번째 줄: 쿠버네티스 안에서 노드 간 통신을 이름으로 할 수 있도록 각 노드의 호스트 이름과 IP를 /etc/hosts에 설정합니다. 이때 워커 노드는 Vagrantfile에서 넘겨받은 N 변수로 전달된 노드 수에 맞게 동적으로 생성합니다.
+
+• 39~42번째 줄: 외부와 통신할 수 있게 DNS 서버를 지정합니다.
+```
+
+<br/>
+
+#### Install_pkg.sh
+- 클러스터를 구성하기 위해서 가상 머신에 설치돼야 하는 의존성 패키지를 명시한다. 
+- 또한 실습에 필요한 소스 코드를 특정 가상 머신(m-k8s) 내부에 내려받도록 설정돼 있다.
+
+```
+#!/usr/bin/env bash
+ 
+# install packages
+yum install epel-release -y
+yum install vim-enhanced -y
+yum install git -y
+ 
+# install docker
+yum install docker -y && systemctl enable --now docker
+ 
+# install kubernetes cluster
+yum install kubectl-$1 kubelet-$1 kubeadm-$1 -y
+systemctl enable --now kubelet
+ 
+# git clone _Book_k8sInfra.git
+if [ $2 = 'Main' ]; then
+ git clone https://github.com/sysnet4admin/_Book_k8sInfra.git
+ mv /home/vagrant/_Book_k8sInfra $HOME
+ find $HOME/_Book_k8sInfra/ -regex ".*\.\(sh\)" -exec chmod 700 {} \;
+fi
+```
+```
+• 6번째 줄: 깃허브에서 코드를 내려받을 수 있게 깃(git)을 설치합니다.
+
+• 9번째 줄: 쿠버네티스를 관리하는 컨테이너를 설치하기 위해 도커를 설치하고 구동합니다.
+
+• 12~13번째 줄: 쿠버네티스를 구성하기 위해 첫 번째 변수($1=Ver='1.18.4')로 넘겨받은 1.18.4 버전의 kubectl, kubelet, kubeadm을 설치하고 kubelet을 시작합니다.
+
+• 16~20번째 줄: 이 책의 전체 실행 코드를 마스터 노드에만 내려받도록 Vagrantfile에서 두 번째 변수($2 = 'Main')를 넘겨받습니다. 그리고 깃에서 코드를 내려받아 실습을 진행할 루트 홈디렉터리(/root)로 옮깁니다. 배시 스크립트(.sh)를 find로 찾아서 바로 실행 가능한 상태가 되도록 chmod 700으로 설정합니다.
+```
+
+<br/>
+
+#### master_node.sh
+- 1개의 가상 머신(m-k8s)을 쿠버네티스 마스터 노드로 구성하는 스크립트다. 
+- 여기서 쿠버네티스 클러스터를 구성할 때 꼭 선택해야 하는 컨테이너 네트워크 인터페이스(CNI, Container Network Interface)도 함께 구성한다.
+```
+#!/usr/bin/env bash
+ 
+# init kubernetes
+kubeadm init --token 123456.1234567890123456 --token-ttl 0 \
+--pod-network-cidr=172.16.0.0/16 --apiserver-advertise-address=192.168.1.10
+ 
+# config for master node only
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+ 
+# config for kubernetes's network
+kubectl apply -f \
+https://raw.githubusercontent.com/sysnet4admin/IaC/master/manifests/172.16_net_  calico.yaml
+```
+```
+• 4~5번째 줄: kubeadm을 통해 쿠버네티스의 워커 노드를 받아들일 준비를 합니다. 먼저 토큰을 123456.1234567890123456으로 지정하고 ttl(time to live, 유지되는 시간)을 0으로 설정해서 기본값인 24시간 후에 토큰이 계속 유지되게 합니다. 그리고 워커 노드가 정해진 토큰으로 들어오게 합니다. 쿠버네티스가 자동으로 컨테이너에 부여하는 네트워크를 172.16.0.0/16(172.16.0.1~172.16.255.254)으로 제공하고, 워커 노드가 접속하는 API 서버의 IP를 192.168.1.10으로 지정해 워커 노드들이 자동으로 API 서버에 연결되게 합니다.
+
+• 8~10번째 줄: 마스터 노드에서 현재 사용자가 쿠버네티스를 정상적으로 구동할 수 있게 설정 파일을 루트의 홈디렉터리(/root)에 복사하고 쿠버네티스를 이용할 사용자에게 권한을 줍니다.
+
+• 13~14번째 줄: 컨테이너 네트워크 인터페이스(CNI)인 캘리코(Calico)의 설정을 적용해 쿠버네티스의 네트워크를 구성합니다.
+```
+
+<br/>
+
+#### work_nodes.sh
+- 3대의 가상 머신(w1-k8s, w2-k8s, w3-k8s)에 쿠버네티스 워커 노드를 구성하는 스크립트이다. 
+- 마스터 노드에 구성된 클러스터에 조인이 필요한 정보가 모두 코드화돼 있어 스크립트를 실행하기만 하면 편하게 워커 노드로서 쿠버네티스 클러스터에 조인된다.
+
+```
+#!/usr/bin/env bash
+ 
+# config for work_nodes only
+kubeadm join --token 123456.1234567890123456 \
+             --discovery-token-unsafe-skip-ca-verification 192.168.1.10:6443
+```
+```
+• 4~5번째 줄: kubeadm을 이용해 쿠버네티스 마스터 노드에 접속합니다. 이때 연결에 필요한 토큰은 기존에 마스터 노드에서 생성한 123456.1234567890123456을 사용합니다. 간단하게 구성하기 위해 --discovery-token-unsafe-skip-ca-verification으로 인증을 무시하고, API 서버 주소인 192.168.1.10으로 기본 포트 번호인 6443번 포트에 접속하도록 설정합니다.
+```
+
+<br/>
+
+4. 쿠버네티스를 구성하는 데 필요한 파일들을 살펴봤으니 다시 구성 과정으로 돌아가자. 명령프롬프트를 명령 창을 열고 `cd c:\HashiCorp/_Book_k8sInfra-main/ch3/3.1.3` 명령으로 쿠버네티스 설치 파일이 있는 디렉터리로 이동한다. vagrant up 명령을 실행한다. 지금까지 설명한 파일들로 쿠버네티스 클러스터가 자동으로 구성된다.
+
+```
+C:\Users\Hoon Jo - Pink>cd c:\HashiCorp/_Book_k8sInfra-main/ch3/3.1.3
+C:\HashiCorp\_Book_k8sInfra-main\ch3\3.1.3> vagrant up
+Bringing machine 'm-k8s' up with 'virtualbox' provider...
+Bringing machine 'w1-k8s' up with 'virtualbox' provider...
+Bringing machine 'w2-k8s' up with 'virtualbox' provider...
+Bringing machine 'w3-k8s' up with 'virtualbox' provider...
+==> m-k8s: Checking if box 'sysnet4admin/CentOS-k8s' version '0.7.0' is up to date...
+==> m-k8s: Setting the name of the VM: m-k8s(github_SysNet4Admin)
+==> m-k8s: Clearing any previously set network interfaces...
+==> m-k8s: Preparing network interfaces based on configuration...
+    m-k8s: Adapter 1: nat
+    m-k8s: Adapter 2: hostonly
+==> m-k8s: Forwarding ports...
+    m-k8s: 22 (guest) => 60010 (host) (adapter 1)
+==> m-k8s: Running 'pre-boot' VM customizations...
+[생략]
+```
+
+<br/>
+
+5. vagrant up 실행이 끝나면 슈퍼푸티를 연다. 2장에서 설정한 세션 창에서 m-k8s를 더블클릭해 터미널에 접속한다.
+
+![image](https://user-images.githubusercontent.com/61584142/161186720-30ea62e6-c84c-40a4-9d05-031873906fe3.png)
+
+<br/>
+
+6. kubectl get nodes 명령으로 쿠버네티스 클러스터에 마스터 노드와 워커 노드들이 정상적으로 생성되고 연결됐는지 확인한다.
+
+```
+[root@m-k8s ~]# kubectl get nodes
+NAME     STATUS   ROLES    AGE   VERSION
+m-k8s    Ready    master   29m   v1.18.4
+w1-k8s   Ready    <none>   24m   v1.18.4
+w2-k8s   Ready    <none>   19m   v1.18.4
+w3-k8s   Ready    <none>   15m   v1.18.4 
+```
+
+<br/>
+
+**쿠버네티스 클러스터 구성이 끝났다. 이제 쿠버네티스를 구성하는 요소를 살펴보면서 쿠버네티스의 개념과 용어를 알아보.
+
+<br/>
+
+### 3.1.4 파드 배포를 중심으로 쿠버네티스 구성 요소 살펴보기
+- 앞에 나온 kubectl, kubelet, API 서버, 캘리코 등은 모두 쿠버네티스 클러스터를 이루는 구성 요소이다. 그 외에도 etcd, 컨트롤러 매니저, 스케줄러, kube-proxy, 컨테이너 런타임, 파드 등이 있다. 이 요소들이 어떤 역할을 담당하는지 차근차근 알아보자.
+
+<br/>
+
+- 우선 설치된 쿠버네티스 구성 요소를 `kubectl get pods --all-namespaces` 명령으로 확인해 보자. 접속한 m-k8s에서 명령을 실행한다.
+```
+[root@m-k8s ~]#  kubectl get pods --all-namespaces
+NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
+kube-system   calico-kube-controllers-6bbf58546b-pmk78   1/1     Running   0          36m
+kube-system   calico-node-bf486                          1/1     Running   0          31m
+kube-system   calico-node-j9plc                          1/1     Running   0          22m
+kube-system   calico-node-mnkgd                          1/1     Running   0          27m
+kube-system   calico-node-xwxtc                          1/1     Running   0          36m
+kube-system   coredns-5644d7b6d9-b4dz9                   1/1     Running   0          36m
+kube-system   coredns-5644d7b6d9-jmsxh                   1/1     Running   0          36m
+kube-system   etcd-m-k8s                                 1/1     Running   0          35m
+kube-system   kube-apiserver-m-k8s                       1/1     Running   0          35m
+kube-system   kube-controller-manager-m-k8s              1/1     Running   0          35m
+kube-system   kube-proxy-5ltsx                           1/1     Running   0          22m
+kube-system   kube-proxy-fzvsx                           1/1     Running   0          36m
+kube-system   kube-proxy-gfsc8                           1/1     Running   0          31m
+kube-system   kube-proxy-v8lxz                           1/1     Running   0          27m
+kube-system   kube-scheduler-m-k8s                       1/1     Running   0          35m 
+```
+
+- --all-namespaces는 기본 네임스페이스인 default 외에 모든 것을 표시하겠다는 의미다. 따라서 모든 네임스페이스에서 파드를 수집해 보여준다. 쿠버네티스 클러스터를 이루는 구성 요소들은 파드 형태로 이루어져 있음을 알 수 있다.
+
+<br/>
 
