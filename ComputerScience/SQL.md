@@ -696,6 +696,66 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 6. GROUP BY 절이나 집계 함수는 단독으로 사용할 수 있지만, 같이 사용해야 좀 더 의미있는 결과를 얻을 수 있다.
 7. GROUP BY 절과 집계 함수를 같이 사용하면 GROUP BY 절에 명시한 항목별로 집계 함수를 사용해 집계한 결괏값이 조회된다.
 
+<br/>
+
+### GROUP BY 절
+<pre><code>SELECT station_name
+  FROM subway_statistics
+ WHERE gubun = ‘승차’
+ GROUP BY station_name
+ ORDER BY station_name;</code></pre>
+ 
+<br/>
+
+### 집계 함수
+<pre><code>SELECT COUNT(*) cnt 
+      ,MIN(passenger_number) min_value
+      ,MAX(passenger_number) max_value
+      ,SUM(passenger_number) sum_value
+      ,AVG(passenger_number) avg_value
+FROM subway_statistics;</code></pre>
+
+<br/>
+
+### 지하철역별 승차 인원 통계
+<pre><code>SELECT station_name
+      ,COUNT(*) cnt 
+      ,MIN(passenger_number) min_value
+      ,MAX(passenger_number) max_value
+      ,SUM(passenger_number) sum_value
+      ,AVG(passenger_number) avg_value
+  FROM subway_statistics
+ WHERE gubun = '승차'
+ GROUP BY station_name
+ ORDER BY station_name;</code></pre>
+
+<br/>
+
+### 구로디지털단지역 시간별 승하차 인원 조회
+<pre><code>SELECT station_name
+      ,boarding_time
+      ,gubun
+      ,MIN(passenger_number) min_value
+      ,MAX(passenger_number) max_value
+      ,SUM(passenger_number) sum_value
+  FROM subway_statistics
+ WHERE station_name in ('구로디지털단지(232)')
+ GROUP BY station_name, boarding_time, gubun
+ ORDER BY station_name, boarding_time, gubun;</code></pre>
+
+<br/>
+
+### 승하차 인원이 많은 순서로 조회
+<pre><code>SELECT station_name
+      ,boarding_time
+      ,gubun       
+      ,MIN(passenger_number) min_value
+      ,MAX(passenger_number) max_value
+      ,SUM(passenger_number) sum_value
+  FROM subway_statistics
+ GROUP BY station_name, boarding_time, gubun
+ ORDER BY 6 DESC;</code></pre>
+ 
 <br/><br/>
 
 ## 총계 산출과 HAVING 절
@@ -706,6 +766,29 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 5. 집계 함수의 결괏값을 기준으로 조회 조건을 줄 때는 WHERE 절이 아닌 HAVING 절에 기술해야 한다.
 6. HAVING 절은 GROUP BY 절 다음에 위치하며 집계 함수나 GROUPING() 함수를 명시하면 해당 함수의 결괏값을 조건으로 줄 수 있다.
 
+<br/>
+
+### HAVING 절
+<pre><code>SELECT station_name
+      ,boarding_time
+      ,gubun
+
+      ,MIN(passenger_number) min_value
+      ,MAX(passenger_number) max_value
+      ,SUM(passenger_number) sum_value
+  FROM subway_statistics
+ GROUP BY station_name, boarding_time, gubun
+ HAVING SUM(passenger_number) BETWEEN 15000 AND 16000
+ ORDER BY 6 DESC;</code></pre>
+
+<br/>
+
+### DISTINCT 사용
+<pre><code>SELECT DISTINCT station_name
+  FROM subway_statistics
+ WHERE gubun = '승차'
+ ORDER BY 1;</code></pre>
+ 
 <br/><br/>
 
 ![DS](https://user-images.githubusercontent.com/61584142/160230478-d4ed1e5e-106b-4f3d-a30f-bb73e7d13184.png)
@@ -721,6 +804,91 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 1. 테이블을 연결해 데이터를 조회하는 것을 조인(join)이라고 한다.
 2. 조인 테이블 각각에 같은 값을 가진 조인 컬럼이 있어야 조인할 수 있다.
 
+<br/>
+
+### emp_master 테이블 생성
+
+<pre><code>CREATE TABLE emp_master
+(
+  emp_id     NUMBER        NOT NULL, – 사원번호
+  emp_name   VARCHAR2(100) NOT NULL, – 사원 명
+  gender     VARCHAR2(10),           – 성별
+  age        NUMBER,                 – 나이
+  hire_date  DATE,                   – 입사일자
+  dept_id    NUMBER,                 – 부서아이디
+  address_id NUMBER,                 – 주소아이디
+  CONSTRAINT emp_master_pk PRIMARY KEY (emp_id)
+);
+
+
+CREATE TABLE dept_master (
+  dept_id    NUMBER NOT NULL,         – 부서아이디
+  dept_name  VARCHAR2(50),            – 부서 명
+  use_yn     VARCHAR2(2) DEFAULT ‘Y’, – 사용여부
+  dept_desc  VARCHAR2(100),           – 부서설명
+  CONSTRAINT dept_master_pk PRIMARY KEY (dept_id)
+);
+
+
+
+CREATE TABLE address_master (
+  address_id   NUMBER NOT NULL,       – 주소아이디
+  city         VARCHAR2(100),         – 도시 명
+  gu           VARCHAR2(50),          – 구 명
+  address_name VARCHAR2(100),         – 나머지 주소
+  CONSTRAINT address_master_pk PRIMARY KEY (address_id)
+);</code></pre>
+
+<br/>
+
+### 데이터 입력
+<pre><code>INSERT INTO emp_master ( emp_id, emp_name, gender, age, hire_date, dept_id, address_id )
+VALUES (1, ‘김유신’, ‘남성’, 56, TO_DATE(‘2018-01-01’, ‘YYYY-MM-DD’), 1, 1);
+
+INSERT INTO emp_master ( emp_id, emp_name, gender, age, hire_date, dept_id, address_id )
+VALUES (2, ‘신사임당’, ‘여성’, 34, TO_DATE(‘2018-01-01’, ‘YYYY-MM-DD’), 1, 2);
+
+INSERT INTO emp_master ( emp_id, emp_name, gender, age, hire_date, dept_id, address_id )
+VALUES (3, ‘홍길동’, ‘남성’, 45, TO_DATE(‘2018-01-01’, ‘YYYY-MM-DD’), 3, 2);
+
+INSERT INTO emp_master ( emp_id, emp_name, gender, age, hire_date, dept_id, address_id )
+VALUES (4, ‘강감찬’, ‘남성’, 23, TO_DATE(‘2018-01-01’, ‘YYYY-MM-DD’), 2, 3);
+
+INSERT INTO emp_master ( emp_id, emp_name, gender, age, hire_date, dept_id, address_id )
+VALUES (5, ‘세종대왕’, ‘남성’, 45, TO_DATE(‘2018-01-01’, ‘YYYY-MM-DD’), 4, 4);
+
+INSERT INTO dept_master ( dept_id, dept_name )
+VALUES (1, ‘회계팀’);
+
+INSERT INTO dept_master ( dept_id, dept_name )
+VALUES (2, ‘경영팀’);
+
+INSERT INTO dept_master ( dept_id, dept_name )
+VALUES (3, ‘전산팀’);
+
+INSERT INTO dept_master ( dept_id, dept_name )
+VALUES (4, ‘마케팅팀’);
+
+INSERT INTO address_master ( address_id, city, gu, address_name )
+VALUES (1, ‘서울특별시’, ‘중구’, ‘새문안로 12’);
+
+INSERT INTO address_master ( address_id, city, gu, address_name )
+VALUES (2, ‘서울특별시’, ‘서대문구’, ‘연희로 15길’);
+
+INSERT INTO address_master ( address_id, city, gu, address_name )
+VALUES (3, ‘서울특별시’, ‘영등포구’, ‘여의대로 99’);
+
+INSERT INTO address_master ( address_id, city, gu, address_name )
+VALUES (4, ‘서울특별시’, ‘강남구’, ‘테헤란로 33’);
+
+COMMIT;</code></pre>
+
+<br/>
+
+### DEFAULT 값 입력 확인
+<pre><code>SELECT *
+  FROM dept_master;</code></pre>
+
 <br/><br/>
 
 ## 내부 조인
@@ -729,6 +897,74 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 3. 내부 조인은 INNER JOIN 구문을 사용하고 ON 절에 조인 조건을 명시하는데, 이때 INNER는 생략할 수 있다.
 4. 내부 조인할 때, INNER JOIN 구문을 사용하는 대신에 FROM 절에 조인 테이블들을 콤마로 구분해 명시하고 조인 조건은 WHERE 절에 기술할 수도 있다.
 
+<br/>
+
+### 부서정보 내부 조인
+<pre><code>SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+      ,dept_master b
+ WHERE a.dept_id = b.dept_id
+ ORDER BY a.emp_id;</code></pre>
+
+<br/>
+
+### ANSI 구문으로 작성한 내부 조인
+<pre><code>SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+ INNER JOIN dept_master b
+    ON a.dept_id = b.dept_id
+ ORDER BY a.emp_id;</code></pre>
+
+<br/>
+
+### 내부 조인에서 남성만 조회
+<pre><code>--기본 구문
+SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+      ,dept_master b
+ WHERE a.dept_id = b.dept_id
+   AND a.gender = '남성'
+ ORDER BY a.emp_id;
+ 
+--ANSI 구문
+SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+ INNER JOIN dept_master b
+    ON a.dept_id = b.dept_id
+ WHERE a.gender = '남성'
+ ORDER BY a.emp_id;</code></pre>
+
+<br/>
+
+### 주소정보 테이블 조인
+<pre><code>--기본 구문
+SELECT a.emp_id, a.emp_name, a.gender, a.age, 
+       b.dept_id, b.dept_name, b.use_yn,
+       c.address_id, c.city, c.gu, c.address_name
+  FROM emp_master a
+      ,dept_master b
+      ,address_master c
+ WHERE a.dept_id    = b.dept_id
+   AND a.address_id = c.address_id
+   AND a.gender     = '남성'
+ ORDER BY a.emp_id;
+ 
+--ANSI 구문
+SELECT a.emp_id, a.emp_name, a.gender, a.age, 
+       b.dept_id, b.dept_name, b.use_yn,
+       c.address_id, c.city, c.gu, c.address_name
+  FROM emp_master a
+ INNER JOIN dept_master b
+    ON a.dept_id = b.dept_id
+ INNER JOIN address_master c
+    ON a.address_id = c.address_id
+ WHERE a.gender = '남성'
+ ORDER BY a.emp_id;</code></pre>
+ 
 <br/><br/>
 
 ## 외부 조인
@@ -739,12 +975,133 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 5. RIGHT 조인은 RIGHT OUTER JOIN 구문을 사용하고 조인 조건은 ON 절에 기술하며, OUTER는 생략할 수 있다.
 6. RIGHT 조인은 조인 구문의 오른쪽, 즉 RIGHT OUTER JOIN 절에 기술한 테이블의 조인 조건을 만족하지 않는 건까지 조회한다.
 
+<br/>
+
+### 사원정보 테이블 데이터 추가 INSERT 문
+
+<pre><code>INSERT INTO emp_master ( emp_id, emp_name, gender, age, hire_date, dept_id, address_id )
+VALUES (6, ‘왕건’, ‘남성’, 35, TO_DATE(‘2018-01-01’, ‘YYYY-MM-DD’), NULL, 4);
+
+COMMIT;</code></pre>
+
+<br/>
+
+### 오라클 기본 구문으로 작성한 외부 조인
+<pre><code>SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+      ,dept_master b
+ WHERE a.dept_id = b.dept_id (+)
+ ORDER BY a.emp_id;</code></pre>
+ 
+<br/>
+
+### ANSI 구문으로 작성한 외부 조인
+
+<pre><code>SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+  LEFT JOIN dept_master b
+    ON a.dept_id = b.dept_id
+ ORDER BY a.emp_id;</code></pre>
+
+<br/>
+
+### 부서정보 테이블에 데이터 추가 INSERT 문
+<pre><code>INSERT INTO dept_master ( dept_id, dept_name )
+VALUES (5, ‘IT팀’);
+
+COMMIT;</code></pre>
+
+<br/>
+
+### 부서정보 테이블 기준 외부 조인
+<pre><code>--오라클 기본 구문
+SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+      ,dept_master b
+ WHERE a.dept_id(+) = b.dept_id
+ ORDER BY a.emp_id;
+ 
+--ANSI 구문
+SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+ RIGHT JOIN dept_master b
+    ON a.dept_id = b.dept_id
+ ORDER BY a.emp_id;</code></pre>
+
+<br/>
+
+### FULL OUTER JOIN
+
+<pre><code>SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+  FULL OUTER JOIN dept_master b
+    ON a.dept_id = b.dept_id
+ ORDER BY a.emp_id;</code></pre>
+ 
 <br/><br/>
 
 ## 기타 조인
 1. 자연 조인은 NATURAL 구문을 사용하고 조인 조건을 기술하지 않으므로 조인 테이블에 이름과 데이터 타입이 같은 컬럼이 존재해야 한다.
 2. 자연 조인 구문으로 내부 조인이나 외부 조인을 할 수 있다.
-3. 카티전 곱은 조인 조건이 없는 조인으로, 조인 테이블의 모든 조합으로 데이터를 조회한다.
+3. 카티션 곱은 조인 조건이 없는 조인으로, 조인 테이블의 모든 조합으로 데이터를 조회한다.
+
+<br/>
+
+### 카티션 곱
+<pre><code>SELECT a.emp_id, a.emp_name, a.gender, a.age, a.dept_id,
+       b.dept_id, b.dept_name, b.use_yn
+  FROM emp_master a
+      ,dept_master b
+ ORDER BY a.emp_id;</code></pre>
+
+<br/><br/>
+
+## 세미 조인
+- 메인쿼리에서 사용된 테이블과 서브쿼리 결과를 조인하는 것이다.
+
+<br/>
+
+### EXISTS 연산자를 사용한 세미 조인
+<pre><code>SELECT *
+  FROM dept_master a
+
+ WHERE EXISTS ( SELECT 1
+                  FROM emp_master b
+                 WHERE b.age BETWEEN 40 AND 49
+                   AND a.dept_id = b.dept_id
+              );</code></pre>
+
+<br/><br/>
+
+## 안티 조인
+- 세미 조인과 형식은 같은데 NOT 연산자가 들어간다는 점이 다르다. 
+- NOT에 반대라는 의미가 있으므로 안티(anti) 조인이란 이름이 붙은 것이다. 
+
+<br/>
+
+### NOT 연산자를 사용한 안티 조인
+<pre><code>SELECT *
+  FROM dept_master a      
+ WHERE a.dept_id NOT IN ( SELECT b.dept_id
+                            FROM emp_master b
+                           WHERE b.age BETWEEN 40 AND 49
+                        );</code></pre>
+                        
+<br/>
+
+### NOT EXISTS를 사용한 안티 조인
+<pre><code>SELECT *
+  FROM dept_master a      
+ WHERE NOT EXISTS ( SELECT 1
+                      FROM emp_master b
+                     WHERE b.age BETWEEN 40 AND 49
+                       AND a.dept_id = b.dept_id
+                   );</code></pre>
 
 <br/><br/>
 
@@ -754,6 +1111,131 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 3. UNION ALL 절을 사용하면 SELECT 절에 기술한 컬럼을 기준으로 중복 값을 포함한 모든 데이터를 조회한다.
 4. UNION 절을 사용하면 일반적으로 ORDER BY와 LIMIT 절은 마지막 SELECT 문에 기술하고, 최종 결과 집합에 대해 정렬을 수행한다.
 5. 개별 SELECT 문에 ORDER BY와 LIMIT 절을 사용하려면 해당 SELECT 문을 소괄호로 묶어야 한다.
+
+<br/>
+
+### emp08 테이블 생성
+<pre><code>CREATE TABLE emp08
+(
+  emp_id2    NUMBER        NOT NULL,
+  emp_name2  VARCHAR2(100) NOT NULL,
+  gender     VARCHAR2(10),
+  age        NUMBER,
+  hire_date  DATE,
+  etc        VARCHAR2(300),
+  CONSTRAINT emp08_pk PRIMARY KEY (emp_id2)
+);</code></pre>
+
+<br/>
+
+### emp08 테이블 데이터 입력
+<pre><code>INSERT INTO emp08 ( emp_id2, emp_name2, gender, age, hire_date )
+VALUES (1, '선덕여왕', '여성', 23, TO_DATE('2018-02-01', 'YYYY-MM-DD'));
+
+INSERT INTO emp08 ( emp_id2, emp_name2, gender, age, hire_date )
+VALUES (2, '허난설헌', '여성', 33, TO_DATE('2018-02-01', 'YYYY-MM-DD'));
+
+INSERT INTO emp08 ( emp_id2, emp_name2, gender, age, hire_date )
+VALUES (3, '김만덕', '여성', 43, TO_DATE('2018-02-01', 'YYYY-MM-DD'));
+
+INSERT INTO emp08 ( emp_id2, emp_name2, gender, age, hire_date )
+VALUES (4, '장희빈', '여성', 35, TO_DATE('2018-02-01', 'YYYY-MM-DD'));
+
+INSERT INTO emp08 ( emp_id2, emp_name2, gender, age, hire_date )
+VALUES (5, '신사임당', '여성', 45, TO_DATE('2018-02-01', 'YYYY-MM-DD'));
+
+COMMIT;</code></pre>
+
+<br/>
+
+### UNION ALL 연산자
+<pre><code>SELECT emp_id, emp_name, gender, age
+  FROM emp03
+ UNION ALL 
+SELECT emp_id2, emp_name2, gender, age
+  FROM emp08;</code></pre>
+
+<br/>
+
+### 집합 연산자를 사용한 쿼리에서 데이터 정렬
+<pre><code>SELECT emp_id, emp_name, gender, age
+  FROM emp03
+ UNION ALL
+SELECT emp_id2, emp_name2, gender, age
+  FROM emp08
+ ORDER BY emp_id DESC;</code></pre>
+ 
+<br/>
+
+### 중복 데이터에 대한 UNION ALL 사용
+<pre><code>SELECT emp_name
+  FROM emp03
+ UNION ALL
+SELECT emp_name2
+  FROM emp08
+ ORDER BY 1;</code></pre>
+ 
+<br/>
+
+### 중복 데이터에 대한 UNION 사용
+<pre><code>SELECT emp_name
+  FROM emp03
+ UNION
+SELECT emp_name2
+  FROM emp08
+ ORDER BY 1;</code></pre>
+
+<br/>
+
+### 값이 다른 컬럼에 대한 UNION 사용
+<pre><code>SELECT emp_name, gender, age
+  FROM emp03
+ UNION
+SELECT emp_name2, gender, age 
+  FROM emp08
+ ORDER BY 1;</code></pre>
+
+<br/>
+
+### INTERSECT 연산자
+
+<pre><code>SELECT emp_name
+  FROM emp03
+INTERSECT
+SELECT emp_name2
+  FROM emp08
+ ORDER BY 1;</code></pre>
+
+<br/>
+
+### 공통 요소가 없을 때 INTERSECT 사용
+
+<pre><code>SELECT emp_name, gender, age
+  FROM emp03
+INTERSECT
+SELECT emp_name2, gender, age 
+  FROM emp08
+ ORDER BY 1;</code></pre>
+
+<br/>
+
+### MINUS 연산자 예제1
+<pre><code>SELECT emp_name
+  FROM emp03
+ MINUS
+SELECT emp_name2
+  FROM emp08
+ ORDER BY 1;</code></pre>
+
+<br/>
+
+### MINUS 연산자 예제2
+<pre><code>SELECT emp_name2
+  FROM emp08
+ MINUS
+SELECT emp_name
+  FROM emp03
+ ORDER BY 1;</code></pre>
 
 <br/><br/>
 
@@ -772,6 +1254,53 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 3. 원하는 데이터를 조회할 때, 한 단계가 아닌 두 단계 이상의 연산이 필요하면 서브쿼리를 사용한다.
 4. 서브쿼리는 메인쿼리의 어디에 위치하는지와 메인쿼리와의 연관성 유무로 유형을 구분한다.
 
+<br/>
+
+### 서브쿼리를 조인으로 변경
+<pre><code>SELECT a.emp_id
+      ,a.emp_name
+      ,a.gender
+      ,a.age
+      ,a.dept_id
+      ,b.dept_name
+ FROM emp_master a
+     ,dept_master b
+WHERE a.dept_id = b.dept_id(+);</code></pre>
+
+<br/>
+
+### 단일 행을 반환하는 중첩 서브쿼리
+
+<pre><code>SELECT *
+  FROM dept_master a
+
+ WHERE a.dept_id = ( SELECT b.dept_id
+                       FROM emp_master b
+                      WHERE b.emp_name = ‘세종대왕‘
+);</code></pre>
+
+<br/>
+
+### 다중 행을 반환하는 중첩 서브쿼리
+<pre><code>SELECT *
+  FROM dept_master a
+ WHERE a.dept_id IN ( SELECT b.dept_id
+                        FROM emp_master b
+                       WHERE b.age BETWEEN 40 AND 49
+                    );</code></pre>
+
+<br/>
+
+### 다중 컬럼, 다중 행을 반환하는 중첩 서브쿼리
+<pre><code>SELECT *
+  FROM emp_master a
+ WHERE ( a.gender, a.age) IN ( SELECT b.gender, b.age
+                                  FROM emp_master b
+                                      ,address_master c
+                                 WHERE b.address_id = c.address_id
+                                   AND c.gu IN ('중구', '서대문구')
+                              );</code></pre>
+
 <br/><br/>
 
 ## 스칼라 서브쿼리와 파생 테이블
@@ -781,6 +1310,42 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 4. 파생 테이블의 서브쿼리는 여러 개의 로우, 여러 컬럼 값을 반환할 수 있다.
 5. 파생 테이블에는 반드시 별칭을 붙여야 하고, 메인쿼리의 테이블과 조인할 수 있다. 일반적으로 조인 조건은 메인쿼리의 WHERE 절에 기술한다.
 6. 파생 테이블은 원래 서브쿼리 안에서 메인쿼리의 테이블을 참조할 수 없지만, MySQL 8.0.14 버전부터 LATERAL 키워드가 추가되어 서브쿼리 안에서 메인쿼리 테이블을 참조할 수 있다. 따라서 조인 조건을 서브쿼리 안에 기술할 수 있다.
+
+<br/>
+
+### 스칼라 서브쿼리
+
+<pre><code>SELECT a.emp_id
+      ,a.emp_name
+      ,a.gender
+      ,a.age
+      ,a.dept_id
+      ,( SELECT b.dept_name
+           FROM dept_master b
+          WHERE a.dept_id = b.dept_id ) dept_name
+FROM emp_master a;</code></pre>
+
+<br/><br/>
+
+## 인라인 뷰
+- 스칼라 서브쿼리와는 다르게 여러 개의 컬럼이나 표현식, 여러 개의 로우를 반환할 수 있다.
+<pre><code>SELECT a.dept_id
+      ,a.dept_name
+      ,k.emp_id
+      ,k.emp_name
+      ,k.address
+  FROM dept_master a
+      ,( SELECT b.emp_id
+               ,b.emp_name
+               ,c.city || c.gu || c.address_name AS address
+               ,b.dept_id
+           FROM emp_master b
+               ,address_master c
+          WHERE b.address_id = c.address_id
+       ) k
+ WHERE a.use_yn = ‘Y’
+   AND a.dept_id = k.dept_id
+ ORDER BY 1, 3;</code></pre>
 
 <br/><br/>
 
@@ -902,6 +1467,263 @@ VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY
 1. 일반적인 데이터 분석 과정은 데이터 수집 → 데이터 정제 → 데이터 분석의 3단계로 나눌 수 있다.
 2. 데이터 정제 작업은 데이터 수집과 입력 과정에서 발생한 오류로 생긴 정확하지 않은 데이터를 걸러 내는 작업을 말한다. 이 과정을 거쳐야 데이터를 좀 더 정확하게 분석할 수 있다.
 3. 데이터 분석에는 SQL 기능 중 조인, 집계 쿼리, 서브쿼리, 윈도우 함수가 자주 사용된다.
+
+<br/><br/>
+
+## 나눔로또 분석
+- 데이터는 나눔로또 홈페이지에서 엑셀 형태 다운
+
+<br/>
+
+### lotto_master 테이블 생성
+<pre><code>CREATE TABLE lotto_master (
+  seq_no       NUMBER NOT NULL, – 로또회차
+  draw_date    DATE,            – 추첨일
+  num1         NUMBER,          – 당첨번호1
+  num2         NUMBER,          – 당첨번호2
+  num3         NUMBER,          – 당첨번호3
+  num4         NUMBER,          – 당첨번호4
+  num5         NUMBER,          – 당첨번호5
+  num6         NUMBER,          – 당첨번호6
+  bonus        NUMBER           – 보너스번호
+ );
+
+ALTER TABLE lotto_master
+ADD CONSTRAINTS lotto_master_pk PRIMARY KEY (seq_no);</code></pre>
+
+<br/>
+
+### lotto_detail 테이블 생성
+<pre><code>CREATE TABLE lotto_detail (
+    seq_no         NUMBER NOT NULL,  -- 로또회차
+    rank_no        NUMBER NOT NULL,  -- 등수
+    win_person_no  NUMBER,           -- 당첨자 수
+    win_money      NUMBER            -- 1인당 당첨금액
+ );
+ 
+ALTER TABLE lotto_detail
+ADD CONSTRAINTS lotto_detail_pk PRIMARY KEY (seq_no, rank_no);</code></pre>
+
+<br/>
+
+### 중복된 로또 번호 존재 여부 조회 1
+<pre><code>SELECT num1, num2, num3, num4, num5, num6, COUNT(*)
+  FROM lotto_master
+ GROUP BY num1, num2, num3, num4, num5, num6;</code></pre>
+
+<br/>
+
+### 중복된 로또 번호 존재 여부 조회 2
+<pre><code>SELECT num1, num2, num3, num4, num5, num6, COUNT(*)
+  FROM lotto_master
+ GROUP BY num1, num2, num3, num4, num5, num6
+ HAVING COUNT(*) > 1;</code></pre>
+
+<br/>
+
+### num1 컬럼 값의 당첨 건수 조회
+<pre><code>SELECT NUM1 lotto_num, COUNT(*) CNT
+  FROM lotto_master
+ GROUP BY NUM1
+ ORDER BY 2 DESC;</code></pre>
+
+<br/>
+
+### 가장 많은 당첨번호 조회
+<pre><code>SELECT lotto_num, SUM(cnt) AS cnt
+  FROM ( SELECT num1 lotto_num, COUNT() cnt
+           FROM lotto_master
+          GROUP BY num1
+          UNION ALL
+         SELECT num2 lotto_num, COUNT() cnt
+           FROM lotto_master
+          GROUP BY num2
+         UNION ALL
+         SELECT num3 lotto_num, COUNT() cnt
+           FROM lotto_master
+          GROUP BY num3
+         UNION ALL
+         SELECT num4 lotto_num, COUNT() cnt
+           FROM lotto_master
+          GROUP BY num4
+         UNION ALL
+         SELECT num5 lotto_num, COUNT() cnt
+           FROM lotto_master
+
+          GROUP BY num5
+          UNION ALL
+         SELECT num6 lotto_num, COUNT() cnt
+           FROM lotto_master
+
+          GROUP BY num6
+       )
+ GROUP BY lotto_num
+ ORDER BY 2 DESC;</code></pre>
+ 
+<br/>
+
+### 최대 당첨금과 당첨번호 조회
+<pre><code>SELECT a.seq_no
+      ,a.draw_date
+      ,b.win_person_no
+      ,b.win_money
+      ,a.num1 ,a.num2 ,a.num3
+      ,a.num4 ,a.num5 ,a.num6 ,a.bonus
+  FROM lotto_master a
+      ,lotto_detail b
+ WHERE a.seq_no = b.seq_no
+   AND b.rank_no = 1
+ ORDER BY b.win_money DESC;</code></pre>
+ 
+<br/><br/>
+
+## 교통사고 분석
+- 1980년부터 2016년까지 자동차, 선박, 지하철, 철도, 항공기별 전체 사고 건수와 사망자 수 데이터
+- 국가교통DB(www.ktdb.go.kr)
+
+<br/>
+
+### traffic_accident 테이블 생성
+<pre><code>CREATE TABLE traffic_accident (
+    year              NUMBER       NOT NULL,  – 연도
+    trans_type        VARCHAR2(30) NOT NULL,  – 교통수단
+    total_acct_num    NUMBER,                 – 사고 건수
+    death_person_num  NUMBER                  – 사망자 수
+
+);
+
+ALTER TABLE traffic_accident
+ADD CONSTRAINTS traffic_accident_pk PRIMARY KEY (year, trans_type);</code></pre>
+
+<br/>
+
+### 연대, 교통수단별 사고, 사망 건수 조회
+<pre><code>SELECT CASE WHEN year BETWEEN 1980 AND 1989 THEN '1980년대'
+            WHEN year BETWEEN 1990 AND 1999 THEN '1990년대'
+            WHEN year BETWEEN 2000 AND 2009 THEN '2000년대'
+            WHEN year BETWEEN 2010 AND 2019 THEN '2010년대'
+       END AS YEARS
+      ,trans_type
+      ,SUM(total_acct_num)   AS 사고건수
+      ,SUM(death_person_num) AS 사망자수
+FROM traffic_accident
+WHERE 1=1
+GROUP BY CASE WHEN year BETWEEN 1980 AND 1989 THEN '1980년대'
+              WHEN year BETWEEN 1990 AND 1999 THEN '1990년대'
+              WHEN year BETWEEN 2000 AND 2009 THEN '2000년대'
+              WHEN year BETWEEN 2010 AND 2019 THEN '2010년대'
+         END, trans_type
+ORDER BY 1, 2;</code></pre>
+
+<br/>
+
+### 교통수단별 사고 건수 연대별 추이
+<pre><code>SELECT trans_type
+      ,SUM(CASE WHEN year BETWEEN 1980 AND 1989 THEN total_acct_num ELSE 0 END) "1980년대"
+      ,SUM(CASE WHEN year BETWEEN 1990 AND 1999 THEN total_acct_num ELSE 0 END) "1990년대"
+      ,SUM(CASE WHEN year BETWEEN 2000 AND 2009 THEN total_acct_num ELSE 0 END) "2000년대"
+      ,SUM(CASE WHEN year BETWEEN 2010 AND 2019 THEN total_acct_num ELSE 0 END) "2010년대"
+FROM traffic_accident
+WHERE 1=1
+GROUP BY trans_type
+ORDER BY trans_type;</code></pre>
+
+<br/>
+
+### 교통수단별 사망자 수 연도별 추이
+<pre><code>SELECT a.*
+ FROM traffic_accident a
+     ,( SELECT trans_type
+              ,MAX(death_person_num) death_per
+          FROM traffic_accident
+         GROUP BY trans_type
+      ) B
+WHERE a.trans_type       = b.trans_type
+  AND a.death_person_num = b.death_per;</code></pre>
+
+<br/><br/>
+
+## 서울시 미세먼지 분석
+- 2017년 1월부터 2018년 3월까지의 서울시 미세먼지 데이터
+- 에어코리아(http://www.airkorea.or.kr)
+
+<br/>
+
+### fine_dust 테이블 생성
+
+<pre><code>CREATE TABLE fine_dust (
+    gu_name           VARCHAR2(50) NOT NULL,  – 구 명
+    mea_station       VARCHAR2(30) NOT NULL,  – 측정소
+    mea_date          DATE         NOT NULL,  – 측정일자
+    pm10              NUMBER,                 – 미세먼지 농도
+    pm25              NUMBER                  – 초미세먼지 농도
+);
+
+ALTER TABLE fine_dust
+ADD CONSTRAINTS fine_dust_pk PRIMARY KEY (gu_name, mea_station, mea_date);</code></pre>
+
+<br/>
+
+### fine_dust_standard 테이블 생성
+<pre><code>CREATE TABLE fine_dust_standard (
+    org_name          VARCHAR2(50) NOT NULL,  -- 기관명
+    std_name          VARCHAR2(30) NOT NULL,  -- 미세먼지 기준(좋음, 
+                                                 보통, 나쁨, 매우나쁨)
+    pm10_start        NUMBER,                 -- 미세먼지 농도(시작 값)
+    pm10_end          NUMBER,                 -- 미세먼지 농도(끝 값)
+    pm25_start        NUMBER,                 -- 초미세먼지 농도(시작 값)
+    pm25_end          NUMBER                  -- 초미세먼지 농도(끝 값) 
+);
+
+ALTER TABLE fine_dust_standard
+ADD CONSTRAINTS fine_dust_standard_pk PRIMARY KEY (org_name, std_name);</code></pre>
+
+<br/>
+
+### 월간 미세먼지의 최소, 최대, 평균값
+<pre><code>SELECT TO_CHAR(a.mea_date, 'YYYY-MM') months
+       ,ROUND(MIN(a.pm10),0) pm10_min
+       ,ROUND(MAX(a.pm10),0) pm10_max
+       ,ROUND(AVG(a.pm10),0) pm10_avg
+       ,ROUND(MIN(a.pm25),0) pm25_min
+       ,ROUND(MAX(a.pm25),0) pm25_max
+       ,ROUND(AVG(a.pm25),0) pm25_avg
+  FROM fine_dust a
+ WHERE pm10 > 0
+   AND pm25 > 0
+ GROUP BY  TO_CHAR(mea_date, 'YYYY-MM')
+ ORDER BY 1;</code></pre>
+
+<br/>
+
+### 월평균 미세먼지 상태
+<pre><code>SELECT a.months
+      ,a.pm10_avg
+      ,( SELECT b.std_name
+           FROM fine_dust_standard b
+          WHERE b.org_name = ‘WHO’
+            AND a.pm10_avg BETWEEN b.pm10_start
+                               AND b.pm10_end
+       ) “미세먼지 상태”
+      ,a.pm25_avg
+      ,( SELECT b.std_name
+           FROM fine_dust_standard b
+          WHERE b.org_name = ‘WHO’
+            AND a.pm25_avg BETWEEN b.pm25_start
+                               AND b.pm25_end
+       ) “초미세먼지 상태”
+
+FROM ( – 월평균 미세먼지 농도 서브쿼리
+       SELECT TO_CHAR(a.mea_date, ‘YYYY-MM’) months
+             ,ROUND(AVG(a.pm10),0) pm10_avg
+             ,ROUND(AVG(a.pm25),0) pm25_avg
+        FROM fine_dust a
+       WHERE a.pm10 > 0
+         AND a.pm25 > 0
+       GROUP BY TO_CHAR(mea_date, ‘YYYY-MM’)
+
+) a
+ORDER BY 1;</code></pre>
 
 <br/><br/>
 
