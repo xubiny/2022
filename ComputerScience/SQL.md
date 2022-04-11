@@ -9,15 +9,84 @@
 - 테이블에 데이터를 저장해 데이터의 중복 저장을 최소화함
 ### SQL을 이용한 처리
 - SQL로 데이터를 손쉽게 처리함
-### 트랜잭션 처라
+### 트랜잭션 처리
 - 트랜잭션 처리로 오류 발생 시 오류 데이터가 저장되지 않음
 ### 데이터 무결성 보장
 - 데이터의 정확성을 보장함
 
 <br/><br/>
 
+## 데이터 관리 유형
+### 데이터 저장 관점
+- 필요한 데이터만 적재적소에 저장해 두는 것이 효율적이다.
+### 데이터 조회 관점
+- 원하는 데이터를 손쉽게 찾아볼 수 있어야 한다.
+### 데이터 수정 관점
+- 특정 데이터만 골라내 원하는 값으로 수정할 수 있어야 한다.
+### 데이터 삭제 관점
+- 원하는 데이터만 골라내 지울 수 있어야 한다.
+
+<br/><br/>
+
 ## RDBMS의 종류
 - 오라클, MySQL, SQL Server, PostgreSQL, DB2, MariaDB 등이 있다.
+
+<br/><br/>
+
+## RDBMS 관련 용어
+### 테이블
+- 우리가 흔히 말하는 표이다. 가로와 세로, 즉 열(컬럼)과 행(로우)으로 구성되어 있다.
+### 컬럼
+- 테이블을 구성하는 데이터의 속성이다. 이런 컬럼들이 모여 하나의 테이블을 구성한다.
+### 로우
+- 지정된 컬럼 데이터로 이루어진 하나의 묶음이다.
+
+<br/><br/>
+
+## RDBMS 단점
+- 컬럼과 관련된 것인데, 테이블 생성 시 컬럼의 유형을 정의하면 나중에 변경할 때 문제 발생 소지가 많다는 점이다. 예를 들어 처음에는 회원정보와 관련된 데이터만 넣으려고 했는데, 주변 여건이 변하여 기존 컬럼을 삭제하거나 새로운 컬럼을 추가해야 하는 상황이 생길 수 있다. 물론 불가능한 일은 아니며 쉽게 해결할 수 있지만, 컬럼 변경으로 인해 기존에 이 테이블을 사용했던 프로그램을 모두 수정해야 한다는 번거로움이 생긴다.
+
+<br/>
+
+- 또한, 요즘처럼 SNS를 통해 다양하고 변화무쌍한 유형의 데이터가 만들어지는 환경에서 하나의 컬럼에 다양한 유형의 데이터를 넣을 수 없다는 비판도 있다. 실제로 이는 불가능하다. 이는 1970년대 소개된 RDBMS가 21세기도 십여 년이 훌쩍 넘은 현재의 여러 유형의 데이터까지 동적으로 처리하도록 설계되지 않았기 때문이다. 현재 SNS로 만들어지는 데이터는 NoSQL 개념의 DBMS가 처리하고 있다. DBMS를 사용하는 기업 입장에서는 추가 비용이 들겠지만, 이런 문제는 데이터의 유형, 쓰임새, 목적에 맞는 DBMS를 사용해 해결하는 것이 현재로서는 바람직하다.
+
+<br/><br/>
+
+## RDBMS의 가장 큰 특징인 관계
+- 데이터 성격에 맞게 테이블을 여러 개로 분리하고, 분리한 테이블 간에 연결고리 역할을 하는 컬럼을 두어 이 컬럼을 이용해 관계를 맺는 것을 말한다.
+
+<br/><br/>
+
+## 데이터베이스 모델링
+- 데이터 성격에 맞게 테이블을 여러 개 만들고 이들 간의 관계를 결정하는 것
+- 모델링은 정답이 없으며 구축하려는 데이터베이스 시스템의 성격에 따라 달라진다. 또한, 별도의 모델링 이론도 학습해야 한다.
+
+<br/><br/>
+
+## 키(Key) 컬럼
+- RDBMS에서는 데이터 무결성을 확보하고자 테이블에 반드시 하나의 키가 되는 컬럼을 두도록 권고하고 있다. 데이터 무결성은 한 마디로 데이터의 정확성을 보장해 올바른 데이터를 유지하는 것을 의미한다.
+
+<br/>
+
+### 기본 키(Primary Key)
+- 테이블에서 특정 로우 데이터를 식별할 수 있는 값을 가진 컬럼
+- 한 테이블 전체로 보면 기본 키 컬럼에는 유일한(unique)한 값이 들어간다.
+
+<br/>
+
+- 키는 특정 데이터를 수정하거나 삭제할 때 사용한다.
+
+<br/>
+
+- 한 테이블에서 유일한 식별자 역할을 하는 키는 테이블 간 관계를 맺을 때도 사용된다. 
+- 즉, 한 테이블에서 유일하게 로우를 식별하는 키를 기본 키, 다른 테이블의 기본 키와 연결고리가 되는 키를 참조 키라고 한다.
+
+<br/><br/>
+
+## 트랜잭션 처리
+- 트랜잭션은 거래라는 뜻이다.
+- RDBMS에서 한 테이블에 있는 특정 데이터를 삭제한 후 연이어 새로운 데이터를 입력한다고 가정하자. 삭제하고 입력할 때 장애가 발생해 입력 작업만 이루어졌다면 제대로 처리된 것이 아니다. 그래서 최종 입력 작업이 완료되기 전에 오류가 발생하면 작업 전 상태로 되돌리고, 입력 작업이 정상적으로 끝난 후에 모든 변경 내용을 최종 적용한다.
+- RDBMS에서 트랜잭션 처리는 원자성, 일관성, 고립성, 지속성 이렇게 네 가지 요소로 구성된다.
 
 <br/><br/>
 
@@ -28,6 +97,11 @@
 
 ## SQL
 - SQL(Structured Query Language, 구조적 질의 언어)은 배우기 쉽고 데이터 조작 작업도 쉽게 처리할 수 있다. 표준이 있어서 RDBMS 종류와 상관없이 사용할 수 있으나 제품별로 조금씩 다른 부분이 있다.
+- SQL은 데이터베이스를 상대로 데이터를 조회, 입력, 수정, 삭제하기 위해 사용하는데, 이 모든 것이 질의에 속한다.
+
+<br/>
+
+- 또한, SQL은 집합적 언어이다. SQL의 상대는 데이터이고, 데이터는 테이블에 저장되어 있다. 테이블은 특정 목적과 성격에 맞는 데이터를 모아 놓은 데이터 저장소이다. SQL은 임의의 조건에 부합한다면 이를 충족하는 데이터 전체를 읽거나 삭제하거나 수정하거나 입력하는 기능을 수행한다. 즉, 데이터를 한 건씩 처리하는 게 아니라 조건에 맞는 데이터 전체를 한 번에 처리하기 때문에 SQL을 집합적 언어라고 한다.
 
 <br/><br/>
 
@@ -183,6 +257,20 @@
 ## 테이블 생성
 - DDL인 CREATE(CREATE TABLE) 문으로 테이블을 생성한다.
 
+
+<br/>
+
+<pre><code>CREATE TABLE emp03 
+(
+   emp_id      NUMBER         NOT NULL,
+   emp_name    VARCHAR2(100)  NOT NULL,
+   gender      VARCHAR2(10)       NULL, 
+   age         NUMBER             NULL,
+   hire_date   DATE               NULL,
+   etc         VARCHAR2(300)      NULL,
+   PRIMARY KEY ( emp_id )
+);</code></pre>
+
 <br/><br/>
 
 ## 테이블 생성 시 주의사항
@@ -206,6 +294,58 @@
 
 ### 컬럼명
 - 한 테이블에서 같은 컬럼명 사용 불가
+
+<br/><br/>
+
+## 데이터 입력
+- SQL, 특히 DML 문장 중에서 데이터 입력 기능을 하는 것은 INSERT문 뿐이다.
+
+<br/>
+
+<pre><code>INSERT INTO 테이블 명 ( column1, column2, column3, … )
+VALUES ( 값1, 값2, … );</code></pre>
+<pre><code>INSERT INTO emp03 ( emp_id, emp_name, gender, age, hire_date )
+VALUES ( 1, '홍길동', '남성', 33, '2018-01-01' );
+
+INSERT INTO emp03 ( emp_id, emp_name, gender, age, hire_date )
+VALUES ( 2, ‘김유신’, ‘남성’, 44, ‘2018-01-01’ );
+
+INSERT INTO emp03 ( emp_id, emp_name, gender, age, hire_date )
+VALUES ( 3, ‘강감찬’, ‘남성’, 55, ‘2018-01-01’ );
+
+INSERT INTO emp03 ( emp_id, emp_name, gender, age, hire_date )
+VALUES ( 4, ‘신사임당’, ‘남성’, 45, ‘2018-01-01’ );</code></pre>
+
+<br/>
+
+<pre><code>SELECT *
+FROM emp03;</code></pre>
+
+<br/>
+
+### COMMIT을 실행해 입력한 데이터 반영
+<pre><code>COMMIT;</code></pre>
+
+<br/><br/>
+
+## 데이터 삭제
+- DELETE 다음에 데이터를 삭제할 대상 테이블 명을 명시하고, 해당 테이블에서 어떤 데이터를 지울 것인지 WHERE 절에 명시한다.
+
+<br/>
+
+<pre><code>DELETE [FROM] 테이블 명
+WHERE 조건</code></pre>
+<pre><code>DELETE FROM emp03
+WHERE emp_id = 4;</code></pre>
+<pre><code>SELECT *
+FROM emp03;</code></pre>
+
+<br/>
+
+### ROLLBACK 문을 실행해 DELETE 전 상태로 복귀
+<pre><code>ROLLBACK;</code></pre>
+<pre><code>SELECT *
+FROM emp03;</code></pre>
 
 <br/><br/>
 
@@ -273,11 +413,55 @@
 ---
 
 # 데이터 조회하고 정렬하기
+## subway_statistics 테이블 생성
+<pre><code>CREATE TABLE subway_statistics (
+     seq_id            NUMBER        NOT NULL,
+     station_name      VARCHAR2(100)     NULL,
+     boarding_date     DATE              NULL,
+     gubun             VARCHAR2(10)      NULL,
+     boarding_time     NUMBER            NULL,
+     passenger_number  NUMBER            NULL,
+     PRIMARY KEY ( seq_id )
+);</code></pre>
+
+<br/><br/>
+
+## subway_statistics 테이블 데이터 입력 INSERT 문
+<pre><code>INSERT INTO subway_statistics VALUES ( 1,‘서울역(150)’,‘2017-04-01’,‘승차’,7,654 );
+INSERT INTO subway_statistics VALUES ( 2,‘서울역(150)’,‘2017-04-01’,‘하차’,7,1923 );
+INSERT INTO subway_statistics VALUES ( 3,‘서울역(150)’,‘2017-04-02’,‘승차’,7,413 );
+INSERT INTO subway_statistics VALUES ( 4,‘서울역(150)’,‘2017-04-02’,‘하차’,7,1119 );
+INSERT INTO subway_statistics VALUES ( 5,‘서울역(150)’,‘2017-04-03’,‘승차’,7,2137 );</code></pre>
+
+<br/><br/>
+
 ## 데이터 조회하기
 1. 테이블에 있는 데이터를 조회할 때는 DML중 하나인 SELECT문을 사용한다.
 2. SELECT 문은 SELECT, FROM, WHERE, ORDER BY, LIMIT 절로 구성된다.
 3. SELECT 절에는 조회하려는 컬럼을 명시하는데, 조회하려는 컬럼이 여러 개일 때는 ,(콤마)로 구분하고, 모든 컬럼을 조회하려면 * (스타)를 명시한다.
 4. FROM 절에는 조회하고자 하는 테이블명을 넣는다.
+
+<br/>
+
+<pre><code>SELECT column1, column2, …
+FROM 테이블 명
+WHERE 조건
+ORDER BY 정렬 순서;</code></pre>
+
+<br/>
+
+### subway_statistics 테이블 조회
+<pre><code>SELECT *
+  FROM subway_statistics;</code></pre>
+
+<br/>
+
+### 특정 컬럼만 조회
+<pre><code>SELECT seq_id
+      ,station_name
+      ,boarding_time
+      ,passenger_number
+ FROM subway_statistics;</code></pre>
 
 <br/><br/>
 
@@ -291,6 +475,66 @@
 7. 두 개의 조회 조건이 AND 연산자로 연결되면 두 조건을 모두 만족하는 데이터만 조회된다.
 8. 두 개의 조회 조건이 OR 연산자로 연결되면 두 조건 중 하나라도 만족하는 데이터는 모두 조회된다.
 
+<br/>
+
+### 지하철역명이 '잠실(216)'인 건 조회
+<pre><code>SELECT *
+  FROM subway_statistics
+ WHERE station_name = ‘잠실(216)’;</code></pre>
+ 
+<br/>
+
+### 잠실역에서 7시나 9시에 승하차한 건을 조회
+<pre><code>SELECT *
+  FROM subway_statistics
+ WHERE station_name = '잠실(216)'
+   AND boarding_time = 7
+    OR boarding_time = 9;</code></pre>
+
+<br/>
+
+### 잠실역에서 7시나 9시에 승하차한 건을 조회하는 올바른 쿼리
+<pre><code>SELECT *
+  FROM subway_statistics
+WHERE station_name = '잠실(216)'
+  AND ( boarding_time = 7
+        OR boarding_time = 9 );</code></pre>
+ 
+<br/>
+
+### LIKE 연산자 사용
+<pre><code>SELECT *
+  FROM subway_statistics
+ WHERE station_name LIKE ‘잠실%’;</code></pre>
+ 
+<br/>
+
+### 선릉역에서 7시와 9시 승하차 건을 조회(Like, In)
+<pre><code>SELECT *
+  FROM subway_statistics
+ WHERE station_name LIKE '선릉%'
+   AND boarding_time IN (7, 9);</code></pre>
+   
+<br/>
+
+### 선릉역에서 승하차 인원이 500 ~ 1000명인 건을 조회
+```
+SELECT *
+  FROM subway_statistics
+ WHERE station_name LIKE '선릉%'
+   AND passenger_number >= 500
+   AND passenger_number <= 1000;
+```
+
+<br/>
+
+### BETWEEN 연산자 사용
+
+<pre><code>SELECT *
+  FROM subway_statistics
+ WHERE station_name LIKE '선릉%'
+   AND passenger_number BETWEEN 500 AND 1000;</code></pre>
+
 <br/><br/>
 
 ## 데이터 정렬하기
@@ -301,6 +545,23 @@
 5. ORDER BY 다음에 여러 개의 컬럼을 명시할 수 있는데, 명시한 순서대로 정렬된다.
 6. ORDER BY 다음에 컬럼명이 아닌 숫자를 넣을 수도 있는데, 이 숫자는 SELECT 절에 기술한 컬럼의 순번을 뜻한다.
 7. 만약 SELECT 절에 명시한 컬럼의 순번을 벗어난 숫자를 ORDER BY 절에 넣으면 오류가 발생한다.
+
+<br/>
+
+### 지하철역명으로 정렬
+
+<pre><code>SELECT *
+  FROM subway_statistics
+ ORDER BY station_name;</code></pre>
+
+<br/>
+
+### 모든 컬럼 정렬
+
+<pre><code>SELECT *
+  FROM subway_statistics
+ WHERE station_name LIKE '선릉%'
+ ORDER BY 1, 2, 3, 4, 5, 6;</code></pre>
 
 <br/><br/>
 
@@ -343,6 +604,46 @@ SELECT *
 4. 함수의 매개변수와 반환값이 날짜인 함수들을 날짜형 함수라고 한다.
 5. 함수에 따라 문자형 함수에 속하지만, 숫자 값을 반환하는 것도 있고, 날짜형 함수지만 숫자나 문자 값을 반환하는 함수도 있다.
 
+<br/>
+
+### ROUND 함수
+<pre><code>SELECT ROUND( 565.545, -1 ) first
+      ,ROUND( 565.545, -2 ) second
+      ,ROUND( 565.545, -3 ) third
+  FROM DUAL;</code></pre>
+  
+<br/>
+
+### SUBSTR 함수
+<pre><code>SELECT SUBSTR( 'ABCDEFG', 1, 3 )   first
+      ,SUBSTR( 'ABCDEFG', 0, 3 )   second
+      ,SUBSTR( 'ABCDEFG', 1 )      third
+      ,SUBSTR( 'ABCDEFG', -2 )     fourth
+      ,SUBSTR( 'ABCDEFG', -2, 1 )  fifth
+      ,SUBSTR( 'ABCDEFG', 2, -1 )  sixth
+  FROM DUAL;</code></pre>
+
+<br/>
+
+### INSTR 함수
+<pre><code>SELECT INSTR( 'ABABAB', 'A' )       first
+      ,INSTR( 'ABABAB', 'A', 2 )    second
+      ,INSTR( 'ABABAB', 'A', 2, 1 ) third
+      ,INSTR( 'ABABAB', 'A', 2, 2 ) fourth
+  FROM DUAL ;</code></pre>
+
+<br/>
+
+### TO_CHAR 함수 사용 예
+<pre><code>SELECT TO_CHAR( SYSDATE, ‘YYYY-MM-DD HH24:MI:SS’ )
+  FROM DUAL;</code></pre>
+
+<br/>
+
+### 명시적 형변환
+<pre><code>INSERT INTO emp03 ( emp_id, emp_name, gender, age, hire_date )
+VALUES ( 1, ‘홍길동’, ‘남성’, 33, TO_DATE(‘2018-01-01’, ‘YYYY-MM-DD’) );</code></pre>
+
 <br/><br/>
 
 ## 기타 함수
@@ -350,6 +651,30 @@ SELECT *
 2. 흐름 제어 함수는 임의의 조건을 확인해 그 결과에 따라 각기 다른 값을 반환하는 함수로, IF, IFNULL(), NULLIF() 함수가 있다.
 3. CASE 연산자는 함수는 아니지만, 특정 조건을 명시하고 그 조건을 확인해 원하는 값을 반환할 수 있으며, 두 가지 형태의 구문을 제공한다.
 4. 함수는 연산 결과를 반환하므로 함수 자체가 다른 함수의 매개변수로 사용될 수 있다.
+
+<br/>
+
+### NULL 관련 함수
+<pre><code>SELECT NVL( NULL, 'N/A' )
+      ,NVL2( 1, 2, 3 ) 
+      ,COALESCE( NULL, NULL, 5, 4, NULL )
+      ,NULLIF( 'NULL', 'null' ) 
+  FROM DUAL;</code></pre>
+
+<br/>
+
+### 검색형 CASE 표현식
+
+<pre><code>SELECT emp_name
+      ,age
+      ,CASE WHEN age BETWEEN 0  AND 19 THEN ‘10대’
+            WHEN age BETWEEN 20 AND 29 THEN ‘20대’
+            WHEN age BETWEEN 30 AND 39 THEN ‘30대’
+            WHEN age BETWEEN 40 AND 49 THEN ‘40대’
+            WHEN age BETWEEN 50 AND 59 THEN ‘50대’
+            ELSE ‘60대 이상’
+       END ages
+  FROM EMP03;</code></pre>
 
 <br/><br/>
 
@@ -472,6 +797,13 @@ SELECT *
 10. EXISTS 연산자를 사용하면 메인쿼리의 데이터 중 조건 서브쿼리와의 조인 조건에 부합하는 데이터를 조회하는데, 이때 조인 조건은 서브쿼리 안에 기술한다.
 11. IN과 EXISTS 연산자 앞에 NOT을 명시하면 포함되지 않는 건과 존재하지 않는 건만 추출할 수 있다.
 12. 조건 서브쿼리와 EXISTS 연산자를 사용한 조인을 세미조인, NOT EXISTS 연산자를 사용한 조인을 안티조인이라고 한다.
+
+<br/><br/>
+
+### 문자열 결합 연산자 사용
+
+<pre><code>SELECT 'A' || 'B'
+  FROM dual;</code></pre>
 
 <br/><br/>
 
