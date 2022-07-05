@@ -117,6 +117,114 @@
 <br/><br/><br/><br/>
 
 # 2. 웹 개발과 Rest API
+## 스프링을 이용한 3가지 웹 동작 방식
+### 2.1 정적 콘텐츠 방식
+<pre><code>@GetMapping("hello")
+public String hello(Model model) {
+    model.addAttribute("data", "hello!!");
+    return "hello";
+}</code></pre>
+
+<br/><br/>
+
+![image](https://user-images.githubusercontent.com/61584142/177341094-d97139e3-d87a-4050-bc2e-d71bd2c10240.png)
+
+<br/>
+
+- 정적 콘텐츠 방식은 파일을 별도의 가공 없이 브라우저로 보내주는 방식이다. 공식 문서를 보면 어떤 파일을 찾아서 전달하는지 나와있다. <br/><br/>
+- index.html을 통해 controller로 이동하게 되면 viewResolver가 리턴 값으로 화면에 해당하는 파일을 찾는다. 스프링 부트 템플릿 엔진은 viewName 맵핑을 지원하기 때문에 파일명이 일치하면 바로 브라우저에 전달한다. <br/><br/>
+
+<br/><br/>
+
+## 2.2 MVC와 템플릿 엔진 방식
+- MVC : Model, View, Controller
+<pre><code>@GetMapping("hello-mvc")
+public String helloMvc(@RequestParam("name") String name, Model model) {
+    model.addAttribute("name", name);
+    return "hello-template";
+}</code></pre>
+
+<br/><br/>
+
+- Controller에서 사용되는 주요 메서드 annotation <br/><br/>
+- @GetMapping : Controller에서 url을 매칭한다. <br/><br/>
+- @RequestParam() : 파라미터로 값을 받을 때 사용한다. <br/><br/>
+
+<pre><code>public String helloMvc(@RequestParam("name") String name) </code></pre>
+
+<br/>
+
+- 위와 같이 @RequestParam()으로 Controller 파라미터가 있다면, 요청 url 뒤에 ?name= 문자열이 파라미터로 붙어야 Controller에서 맵핑을 한다.
+
+<br/>
+
+![image](https://user-images.githubusercontent.com/61584142/177341818-91a92fb8-6bf0-408f-941b-0721ffe79844.png)
+
+<br/>
+
+- Controller : url 요청이 들어오면 내장 톰캣서버가 해당 Controller를 찾아 보내준다. <br/><br/>
+- Model : Controller는 url에 일치하는 메서드를 찾아 실행한다. return을 이용해 필요한 데이터를 담은 model을 전달한다. <br/><br/>
+- View : viewResolver가 템플릿 엔진을 이용해 return과 이름이 일치하는 view 파일을 찾아 브라우저에 보여준다. <br/><br/>
+
+<br/><br/>
+
+## 2.3 API 방식
+- 정적 콘텐츠 방식이 아니라면 2가지(MVC/API)만 기억하면 된다. <br/><br/>
+- MVC가 별도의 View 영역이 존재하고, html 파일을 조작하여 브라우저에게 전달하는 방식이라면, API는 브라우저에 데이터만 보내주고 화면을 만드는 건 브라우저가 담당하는 방식이다.
+
+<pre><code>@GetMapping("hello-mvc")
+@ResponseBody
+public String helloString(@RequestParam("name") String name) {
+    return "hello" + name;
+}</code></pre>
+
+<br/><br/>
+
+### API 방식의 주요 annotation
+- @ResponseBody : html이 아닌 http의 통신 프로토콜이 header와 body로 나눠지는데, body에 이 내용을 직접 넣겠다는 의미다. <br/><br/>
+- 리턴되는 데이터가 클라이언트에게 그대로 전달된다. <br/><br/>
+- View가 별도로 존재하지 않는다. 데이터가 그대로 전달된다. <br/><br/>
+
+<br/>
+
+### 만약 객체를 보내야 할 경우 어떻게 해야 할까?
+- api 방식에서는 return 타입으로 객체를 보내면 기본적으로 json 객체가 브라우저에 전달된다. <br/><br/>
+- json은 key:value 구조로 이루어진 문자열 데이터 포맷이다. 
+
+<pre><code>@GetMapping("hello-api")
+@ResponseBody
+public Hello helloApi(@RequestParam("name") String name) {
+    Hello hello = new Hello();
+    hello.setName(name);
+    return hello;
+
+}
+
+static class Hello {
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}</code></pre>
+
+<br/><br/>
+
+### 2.3.1 API 방식의 동작 원리
+- API는 HTTP의 body 영역에 문자 내용을 직접 반환한다. 화면을 별도로 만들지 않기 때문에 viewResolver 대신에 httpMessageConverter가 동작한다. 해당 기능은 스프링 부트에서 자동으로 제공한다. httpMessageConverter는 리턴 타입이 문자열일 경우 StringHttpMessageConverter 객체를 사용하고, 리턴 타입이 객체일 경우 MappingJackson2HttpMessageConverter을 사용한다. <br/><br/>
+- jackson은 스프링이 객체를 json으로 바꿔주는데 사용하는 디폴트 라이브러리다. <br/><br/>
+- 만약 클라이언트의 HTTP Accept 헤더에 특정한 반환 타입이 명시되어 있을 경우, 스프링은 controller의 리턴 타입 정보를 참고하여 자동으로 적합한 타입을 결정한다. 그리고 타입에 해당하는 HttpMessageConverter가 선택되어, 데이터를 변환 후 전달한다. <br/><br/>
+
+<br/><br/>
+
+
+
+
+
 
 
 
