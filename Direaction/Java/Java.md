@@ -127,3 +127,11 @@ public class VariableEx {
 
 ## 피연산자
 - 연산자와 연산을 수행하려면 반드시 연산의 대상이 있어야 하는데 이를 피연산자라고 한다. <br/><br/>
+
+<br/>
+
+## 연산자의 종류
+
+![image](https://user-images.githubusercontent.com/61584142/179002853-268da850-3639-4f77-b4e7-38032955db94.png)
+
+<br/><br/>
